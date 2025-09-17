@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机器学习研讨平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 替换原来的Firebase脚本，使用compat兼容版本 -->
+    <!-- Firebase脚本 -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     <style>
@@ -104,6 +105,7 @@
         .nav-links {
             display: flex;
             gap: 2rem;
+            align-items: center;
         }
 
         .nav-link {
@@ -132,6 +134,40 @@
 
         .nav-link:hover::after {
             width: 100%;
+        }
+
+        .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .auth-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+        }
+
+        .user-info img {
+            border-radius: 50%;
         }
 
         /* Subnav Styles */
@@ -387,11 +423,34 @@
             transition: var(--transition);
             font-size: 0.95rem;
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .chapter-link:hover, .chapter-link.active {
             background-color: rgba(52, 152, 219, 0.1);
             color: var(--primary-color);
+        }
+
+        .progress-indicator {
+            font-size: 0.8rem;
+            color: var(--primary-color);
+        }
+
+        .progress-bar-container {
+            height: 6px;
+            background-color: var(--light-gray);
+            border-radius: 3px;
+            margin-top: 0.3rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
         }
 
         .resources-content {
@@ -794,6 +853,84 @@
             color: white;
         }
 
+        .new-topic-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .new-topic-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .topic-form {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .topic-form.visible {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+
         /* Footer */
         footer {
             background-color: var(--secondary-color);
@@ -1028,6 +1165,15 @@
                 <a href="../Website/home.html#lab" class="nav-link">实验室介绍</a>
                 <a href="../Website/home.html#research" class="nav-link">研究方向</a>
                 <a href="../Website/home.html#contact" class="nav-link">联系我们</a>
+                <div class="auth-buttons">
+                    <button id="github-login" class="auth-btn">
+                        <i class="fab fa-github"></i> GitHub登录
+                    </button>
+                    <button id="github-logout" class="auth-btn" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i> 退出登录
+                    </button>
+                    <div id="user-info" class="user-info"></div>
+                </div>
             </nav>
         </div>
     </header>
@@ -1148,24 +1294,136 @@
                 <div class="resources-sidebar animate delay-1">
                     <h4 id="d2l-textbook-header">《动手学深度学习》章节</h4>
                     <ul class="chapters-list" data-textbook="d2l">
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="1">第1章 深度学习基础</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="2">第2章 预备知识</a></li>
-                        <li class="chapter-item"><a class="chapter-link active" data-chapter="3">第3章 神经网络基础</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="4">第4章 深度学习计算</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="5">第5章 卷积神经网络</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="6">第6章 循环神经网络</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="7">第7章 优化算法</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="8">第8章 计算性能</a></li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="1">
+                                第1章 深度学习基础
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-1"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="2">
+                                第2章 预备知识
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-2"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link active" data-chapter="3">
+                                第3章 神经网络基础
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-3"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="4">
+                                第4章 深度学习计算
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-4"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="5">
+                                第5章 卷积神经网络
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-5"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="6">
+                                第6章 循环神经网络
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-6"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="7">
+                                第7章 优化算法
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-7"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="8">
+                                第8章 计算性能
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="d2l-8"></div>
+                            </div>
+                        </li>
                     </ul>
 
                     <h4 style="margin-top: 2rem;" id="dl-textbook-header">《深度学习》章节</h4>
                     <ul class="chapters-list" data-textbook="dl">
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="1">第1章 引言</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="2">第2章 线性代数</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="3">第3章 概率与信息论</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="4">第4章 数值计算</a></li>
-                        <li class="chapter-item"><a class="chapter-link active" data-chapter="5">第5章 机器学习基础</a></li>
-                        <li class="chapter-item"><a class="chapter-link" data-chapter="6">第6章 深度前馈网络</a></li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="1">
+                                第1章 引言
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-1"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="2">
+                                第2章 线性代数
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-2"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="3">
+                                第3章 概率与信息论
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-3"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="4">
+                                第4章 数值计算
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-4"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link active" data-chapter="5">
+                                第5章 机器学习基础
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-5"></div>
+                            </div>
+                        </li>
+                        <li class="chapter-item">
+                            <a class="chapter-link" data-chapter="6">
+                                第6章 深度前馈网络
+                                <span class="progress-indicator">0%</span>
+                            </a>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" data-chapter="dl-6"></div>
+                            </div>
+                        </li>
                     </ul>
                 </div>
 
@@ -1190,6 +1448,9 @@
                                 <a class="resource-link" data-resource="video" data-textbook="d2l" href="https://www.bilibili.com/video/BV1Y7411d7Ys" target="_blank">
                                     <i class="fas fa-video"></i> 配套视频
                                 </a>
+                                <button class="resource-link" data-resource="complete" data-textbook="d2l" data-chapter="3">
+                                    <i class="fas fa-check"></i> 标记为已学习
+                                </button>
                             </div>
                             
                             <div class="exercises-section" id="d2l-exercises">
@@ -1207,121 +1468,42 @@
                                     <li class="exercise-item">
                                         <div class="exercise-header">
                                             <div class="exercise-title">
-                                                <i class="fas fa-code" style="color: var(--primary-color);"></i>
-                                                习题3.1：实现一个简单的全连接神经网络
+                                                <i class="fas fa-question-circle"></i> 问题1：神经网络的基本组成部分有哪些？
                                             </div>
                                             <div class="exercise-meta">
                                                 <div class="difficulty">
-                                                    <div class="difficulty-dot active"></div>
                                                     <div class="difficulty-dot active"></div>
                                                     <div class="difficulty-dot"></div>
+                                                    <div class="difficulty-dot"></div>
                                                 </div>
-                                                <div>对应教材P89</div>
+                                                <span>简答题</span>
                                             </div>
                                         </div>
                                         <div class="exercise-question">
-                                            使用PyTorch实现一个包含输入层、隐藏层和输出层的全连接神经网络，其中隐藏层包含256个神经元并使用ReLU激活函数。实现前向传播过程，并测试网络对随机输入的输出。
+                                            请简述神经网络的基本组成部分及其作用。
                                         </div>
                                         <div class="exercise-actions">
-                                            <button class="exercise-btn toggle-answer">
+                                            <button class="exercise-btn show-answer" data-id="1">
                                                 <i class="fas fa-eye"></i> 查看答案
                                             </button>
-                                            <button class="exercise-btn discuss-exercise" data-exercise="d2l-3-1">
-                                                <i class="fas fa-comment"></i> 讨论此题
+                                            <button class="exercise-btn mark-completed" data-id="1" data-type="exercise" data-chapter="d2l-3">
+                                                <i class="fas fa-check"></i> 标记为已完成
                                             </button>
                                         </div>
-                                        <div class="exercise-answer">
+                                        <div class="exercise-answer" id="answer-1">
                                             <div class="answer-content">
-                                                <p>实现代码如下：</p>
-                                                <pre>
-import torch
-import torch.nn as nn
-
-# 定义简单的全连接神经网络
-class SimpleNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(SimpleNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)  # 输入层到隐藏层
-        self.relu = nn.ReLU()                          # ReLU激活函数
-        self.fc2 = nn.Linear(hidden_size, output_size) # 隐藏层到输出层
-    
-    def forward(self, x):
-        out = self.fc1(x)
-        out = self.relu(out)
-        out = self.fc2(out)
-        return out
-
-# 测试网络
-if __name__ == "__main__":
-    # 超参数
-    input_size = 784  # 例如MNIST图像大小28x28
-    hidden_size = 256
-    output_size = 10   # 例如10个类别
-    
-    # 创建模型
-    model = SimpleNN(input_size, hidden_size, output_size)
-    
-    # 随机输入测试
-    random_input = torch.randn(1, input_size)  # 批量大小为1的随机输入
-    output = model(random_input)
-    print(f"输出形状: {output.shape}")
-    print(f"输出值: {output}")</pre>
-                                                <p>代码说明：</p>
-                                                <p>1. 我们定义了一个SimpleNN类，继承自nn.Module，这是PyTorch中定义神经网络的标准方式。</p>
-                                                <p>2. 在__init__方法中，我们定义了两个全连接层(fc1和fc2)和一个ReLU激活函数。</p>
-                                                <p>3. forward方法定义了前向传播过程：输入→全连接层1→ReLU激活→全连接层2→输出。</p>
-                                                <p>4. 测试部分创建了一个随机输入张量，并通过模型得到输出，验证了网络的基本功能。</p>
+                                                神经网络的基本组成部分包括：
+                                                1. 输入层：接收原始数据输入
+                                                2. 隐藏层：对输入数据进行特征提取和转换
+                                                3. 输出层：产生最终的预测结果
+                                                4. 激活函数：引入非线性因素，使网络能够拟合复杂函数
+                                                5. 权重和偏置：控制各神经元之间的连接强度，是网络学习的参数
+                                                6. 损失函数：衡量预测结果与真实值之间的差距
+                                                7. 优化器：根据损失函数调整权重和偏置，以最小化损失
                                             </div>
                                         </div>
                                     </li>
-                                    
-                                    <li class="exercise-item">
-                                        <div class="exercise-header">
-                                            <div class="exercise-title">
-                                                <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                                习题3.2：解释反向传播算法的基本原理
-                                            </div>
-                                            <div class="exercise-meta">
-                                                <div class="difficulty">
-                                                    <div class="difficulty-dot active"></div>
-                                                    <div class="difficulty-dot active"></div>
-                                                    <div class="difficulty-dot active"></div>
-                                                </div>
-                                                <div>对应教材P95</div>
-                                            </div>
-                                        </div>
-                                        <div class="exercise-question">
-                                            详细解释反向传播算法的基本原理、计算过程和在神经网络训练中的作用。说明链式法则在反向传播中的应用。
-                                        </div>
-                                        <div class="exercise-actions">
-                                            <button class="exercise-btn toggle-answer">
-                                                <i class="fas fa-eye"></i> 查看答案
-                                            </button>
-                                            <button class="exercise-btn discuss-exercise" data-exercise="d2l-3-2">
-                                                <i class="fas fa-comment"></i> 讨论此题
-                                            </button>
-                                        </div>
-                                        <div class="exercise-answer">
-                                            <div class="answer-content">
-                                                <p>反向传播算法是训练神经网络的核心算法，其基本原理如下：</p>
-                                                
-                                                <p>1. 基本原理：</p>
-                                                <p>反向传播算法利用链式法则，从神经网络的输出层开始，逐层计算损失函数对各层参数的梯度，从而为参数更新提供依据。它将复杂的梯度计算分解为一系列简单的局部计算，大幅提高了计算效率。</p>
-                                                
-                                                <p>2. 计算过程：</p>
-                                                <p>① 前向传播：将输入数据通过网络计算，得到输出结果和各层的中间变量；</p>
-                                                <p>② 计算损失：根据网络输出和真实标签计算损失函数；</p>
-                                                <p>③ 反向传播：从输出层开始，计算损失函数对输出层参数的梯度，然后逐层向前计算损失函数对各层参数的梯度；</p>
-                                                <p>④ 参数更新：使用计算得到的梯度，通过梯度下降等优化算法更新网络参数。</p>
-                                                
-                                                <p>3. 在神经网络训练中的作用：</p>
-                                                <p>反向传播算法解决了深层神经网络的参数优化问题，使得训练深层网络成为可能。没有反向传播，计算深层网络的梯度将变得极其复杂和低效。</p>
-                                                
-                                                <p>4. 链式法则的应用：</p>
-                                                <p>链式法则是反向传播的数学基础，用于计算复合函数的导数。在神经网络中，损失函数是网络参数的复合函数，通过链式法则可以将损失函数对某一层参数的梯度表示为损失函数对下一层输入的梯度与该层参数对输入的梯度的乘积。这种递归关系使得我们可以从输出层开始，逐层计算各层参数的梯度。</p>
-                                            </div>
-                                        </div>
-                                    </li>
+                                    <!-- 更多练习题... -->
                                 </ul>
                             </div>
                         </div>
@@ -1330,139 +1512,26 @@ if __name__ == "__main__":
                     <!-- 《深度学习》卡片 -->
                     <div class="textbook-card animate delay-3" id="dl-textbook-card">
                         <div class="textbook-cover">
-                            <img src="https://picsum.photos/id/20/300/400" alt="《深度学习》教材封面">
+                            <img src="https://picsum.photos/id/42/300/400" alt="《深度学习》教材封面">
                         </div>
                         <div class="textbook-info">
-                            <h4 class="textbook-title">《深度学习》（Deep Learning）</h4>
+                            <h4 class="textbook-title">《深度学习》</h4>
                             <p class="textbook-author">作者：伊恩·古德费洛 (Ian Goodfellow)、约书亚·本吉奥 (Yoshua Bengio)、亚伦·库维尔 (Aaron Courville)</p>
-                            <p class="textbook-desc" id="dl-desc">本书被称为"深度学习圣经"，系统全面地介绍了深度学习的理论基础、核心算法和应用场景。内容涵盖数学基础、经典模型、优化方法等，适合深入理解深度学习的理论体系。</p>
+                            <p class="textbook-desc" id="dl-desc">本书被称为"深度学习圣经"，系统全面地介绍了深度学习的理论基础和算法原理。内容涵盖了数学基础、经典模型、优化方法等，适合作为深度学习的入门到进阶教材。</p>
                             
                             <div class="resource-links">
                                 <a class="resource-link" data-resource="pdf" data-textbook="dl">
                                     <i class="fas fa-file-pdf"></i> 电子版教材
                                 </a>
-                                <a class="resource-link" data-resource="online" data-textbook="dl" href="https://www.deeplearningbook.org/" target="_blank">
-                                    <i class="fas fa-book-open"></i> 在线阅读
+                                <a class="resource-link" data-resource="code" data-textbook="dl">
+                                    <i class="fas fa-code"></i> 配套代码库
                                 </a>
-                                <a class="resource-link" data-resource="notes" data-textbook="dl" href="https://github.com/DeepLearningBook/notes" target="_blank">
-                                    <i class="fas fa-highlighter"></i> 学习笔记
+                                <a class="resource-link" data-resource="notes" data-textbook="dl">
+                                    <i class="fas fa-sticky-note"></i> 学习笔记
                                 </a>
-                            </div>
-                            
-                            <div class="exercises-section" id="dl-exercises">
-                                <div class="exercises-header">
-                                    <h4>第5章 练习题</h4>
-                                    <div class="exercises-filter">
-                                        <button class="filter-btn active">全部</button>
-                                        <button class="filter-btn">选择题</button>
-                                        <button class="filter-btn">简答题</button>
-                                        <button class="filter-btn">证明题</button>
-                                    </div>
-                                </div>
-                                
-                                <ul class="exercise-list">
-                                    <li class="exercise-item">
-                                        <div class="exercise-header">
-                                            <div class="exercise-title">
-                                                <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                                习题5.1：解释监督学习与无监督学习的区别
-                                            </div>
-                                            <div class="exercise-meta">
-                                                <div class="difficulty">
-                                                    <div class="difficulty-dot active"></div>
-                                                    <div class="difficulty-dot"></div>
-                                                    <div class="difficulty-dot"></div>
-                                                </div>
-                                                <div>对应教材P112</div>
-                                            </div>
-                                        </div>
-                                        <div class="exercise-question">
-                                            详细说明监督学习与无监督学习的核心区别，分别列举3个典型应用场景，并分析两种学习方式在数据需求和模型目标上的差异。
-                                        </div>
-                                        <div class="exercise-actions">
-                                            <button class="exercise-btn toggle-answer">
-                                                <i class="fas fa-eye"></i> 查看答案
-                                            </button>
-                                            <button class="exercise-btn discuss-exercise" data-exercise="dl-5-1">
-                                                <i class="fas fa-comment"></i> 讨论此题
-                                            </button>
-                                        </div>
-                                        <div class="exercise-answer">
-                                            <div class="answer-content">
-                                                <p>监督学习与无监督学习的核心区别及分析如下：</p>
-                                                
-                                                <p>1. 核心区别：</p>
-                                                <p>监督学习使用带有标签的训练数据（即每个输入样本都对应一个已知的输出标签），模型目标是学习输入到输出的映射关系；无监督学习使用无标签的训练数据，模型目标是从数据中自动发现潜在的结构、模式或分布特征。</p>
-                                                
-                                                <p>2. 应用场景：</p>
-                                                <p>监督学习：图像分类（如识别猫/狗）、房价预测（根据特征预测价格）、垃圾邮件识别（判断邮件是否为垃圾邮件）；</p>
-                                                <p>无监督学习：聚类分析（如用户行为分群）、降维可视化（如PCA处理高维数据）、异常检测（如信用卡欺诈识别）。</p>
-                                                
-                                                <p>3. 数据需求与模型目标差异：</p>
-                                                <p>数据需求：监督学习需要大量带标签数据，标签获取成本高；无监督学习仅需无标签数据，数据获取成本低，但对数据质量要求更高；</p>
-                                                <p>模型目标：监督学习目标是最小化预测值与真实标签的误差，追求精准的映射能力；无监督学习目标是最大化对数据结构的解释能力，如聚类的紧凑性或降维后的信息保留率。</p>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    
-                                    <li class="exercise-item">
-                                        <div class="exercise-header">
-                                            <div class="exercise-title">
-                                                <i class="fas fa-pencil-alt" style="color: var(--primary-color);"></i>
-                                                习题5.2：证明最小二乘法的最优解
-                                            </div>
-                                            <div class="exercise-meta">
-                                                <div class="difficulty">
-                                                    <div class="difficulty-dot active"></div>
-                                                    <div class="difficulty-dot active"></div>
-                                                    <div class="difficulty-dot active"></div>
-                                                </div>
-                                                <p>对应教材P115</p>
-                                            </div>
-                                        </div>
-                                        <div class="exercise-question">
-                                            给定线性回归模型 $y = X\theta + \epsilon$（其中 $X$ 为特征矩阵，$\theta$ 为参数向量，$\epsilon$ 为误差项），损失函数为平方损失 $L(\theta) = \frac{1}{2}\|y - X\theta\|_2^2$，证明当 $X^TX$ 可逆时，损失函数的最优解为 $\hat{\theta} = (X^TX)^{-1}X^Ty$。
-                                        </div>
-                                        <div class="exercise-actions">
-                                            <button class="exercise-btn toggle-answer">
-                                                <i class="fas fa-eye"></i> 查看答案
-                                            </button>
-                                            <button class="exercise-btn discuss-exercise" data-exercise="dl-5-2">
-                                                <i class="fas fa-comment"></i> 讨论此题
-                                            </button>
-                                        </div>
-                                        <div class="exercise-answer">
-                                            <div class="answer-content">
-                                                <p>证明过程如下：</p>
-                                                
-                                                <p>1. 展开损失函数：</p>
-                                                <p>平方损失函数可展开为：</p>
-                                                <p>$L(\theta) = \frac{1}{2}\|y - X\theta\|_2^2 = \frac{1}{2}(y - X\theta)^T(y - X\theta)$</p>
-                                                <p>进一步展开矩阵乘法：</p>
-                                                <p>$L(\theta) = \frac{1}{2}(y^Ty - y^TX\theta - \theta^TX^Ty + \theta^TX^TX\theta)$</p>
-                                                <p>由于 $y^TX\theta$ 是标量，其转置等于自身，即 $y^TX\theta = (y^TX\theta)^T = \theta^TX^Ty$，因此：</p>
-                                                <p>$L(\theta) = \frac{1}{2}(y^Ty - 2\theta^TX^Ty + \theta^TX^TX\theta)$</p>
-                                                
-                                                <p>2. 对 $\theta$ 求偏导：</p>
-                                                <p>根据矩阵求导法则：</p>
-                                                <p>- 常数项 $y^Ty$ 对 $\theta$ 的偏导为 0；</p>
-                                                <p>- 线性项 $-2\theta^TX^Ty$ 对 $\theta$ 的偏导为 $-2X^Ty$；</p>
-                                                <p>- 二次项 $\theta^TX^TX\theta$ 对 $\theta$ 的偏导为 $2X^TX\theta$（因 $X^TX$ 为对称矩阵）；</p>
-                                                <p>因此，损失函数对 $\theta$ 的偏导为：</p>
-                                                <p>$\frac{\partial L(\theta)}{\partial \theta} = \frac{1}{2}(-2X^Ty + 2X^TX\theta) = X^TX\theta - X^Ty$</p>
-                                                
-                                                <p>3. 求最优解：</p>
-                                                <p>损失函数为凸函数（因 $X^TX$ 为半正定矩阵，当 $X^TX$ 可逆时为正定矩阵），最优解满足偏导为 0：</p>
-                                                <p>$X^TX\theta - X^Ty = 0$</p>
-                                                <p>整理得：</p>
-                                                <p>$X^TX\theta = X^Ty$</p>
-                                                <p>当 $X^TX$ 可逆时，两边同时左乘 $(X^TX)^{-1}$，得最优解：</p>
-                                                <p>$\hat{\theta} = (X^TX)^{-1}X^Ty$</p>
-                                                <p>证毕。</p>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
+                                <button class="resource-link" data-resource="complete" data-textbook="dl" data-chapter="5">
+                                    <i class="fas fa-check"></i> 标记为已学习
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1471,144 +1540,129 @@ if __name__ == "__main__":
         </div>
     </section>
 
-    <section class="section" id="schedule" style="background-color: white;">
+    <section class="section" id="schedule">
         <div class="container">
             <div class="section-title animate">
-                <h3>学习进度安排</h3>
-                <p>12周系统化学习计划，循序渐进掌握核心知识</p>
+                <h3>学习进度</h3>
+                <p>12周学习计划，循序渐进掌握机器学习核心知识</p>
                 <div class="section-divider"></div>
             </div>
 
-            <div class="animate delay-1">
-                <table class="schedule-table">
-                    <thead>
-                        <tr>
-                            <th>周次</th>
-                            <th>学习主题</th>
-                            <th>对应教材章节</th>
-                            <th>学习任务</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="week-number">第1周</span></td>
-                            <td>
-                                <div class="topic-title">机器学习基础概念</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="1" href="https://example.com/week1-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="video" data-week="1" href="https://example.com/week1-video" target="_blank"><i class="fas fa-video"></i> 视频</a>
+            <table class="schedule-table animate delay-1">
+                <thead>
+                    <tr>
+                        <th>周次</th>
+                        <th>学习主题</th>
+                        <th>学习内容</th>
+                        <th>资源链接</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="week-number">第1周</span></td>
+                        <td>
+                            <div class="topic-title">机器学习基础</div>
+                            <div class="topic-progress">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" data-week="1"></div>
                                 </div>
-                            </td>
-                            <td>
-                                《深度学习》第1-2章<br>
-                                《动手学深度学习》第1章
-                            </td>
-                            <td>完成基础概念测验</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第2周</span></td>
-                            <td>
-                                <div class="topic-title">线性回归与逻辑回归</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="2" href="https://example.com/week2-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="2" href="https://example.com/week2-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
+                            </div>
+                        </td>
+                        <td>
+                            机器学习基本概念、监督学习与无监督学习、模型评估方法
+                        </td>
+                        <td class="topic-resources">
+                            <a class="topic-resource" data-week="1" data-resource="slides">课件</a>
+                            <a class="topic-resource" data-week="1" data-resource="video">视频</a>
+                            <a class="topic-resource" data-week="1" data-resource="complete">标记完成</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="week-number">第2周</span></td>
+                        <td>
+                            <div class="topic-title">线性回归与逻辑回归</div>
+                            <div class="topic-progress">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" data-week="2"></div>
                                 </div>
-                            </td>
-                            <td>
-                                《深度学习》第5章<br>
-                                《动手学深度学习》第2章
-                            </td>
-                            <td>实现线性回归模型</td>
-                        </tr>
-                        <tr style="background-color: rgba(52, 152, 219, 0.05);">
-                            <td><span class="week-number">第3周</span></td>
-                            <td>
-                                <div class="topic-title">神经网络基础</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="3" href="https://example.com/week3-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="3" href="https://example.com/week3-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
+                            </div>
+                        </td>
+                        <td>
+                            线性回归模型、损失函数、梯度下降、逻辑回归原理与实现
+                        </td>
+                        <td class="topic-resources">
+                            <a class="topic-resource" data-week="2" data-resource="slides">课件</a>
+                            <a class="topic-resource" data-week="2" data-resource="video">视频</a>
+                            <a class="topic-resource" data-week="2" data-resource="complete">标记完成</a>
+                        </td>
+                    </tr>
+                    <!-- 更多周次... -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="section" id="exercises">
+        <div class="container">
+            <div class="section-title animate">
+                <h3>练习题</h3>
+                <p>通过练习巩固所学知识，检验学习效果</p>
+                <div class="section-divider"></div>
+            </div>
+
+            <div class="exercises-section animate delay-1">
+                <div class="exercises-header">
+                    <h4>全部练习题</h4>
+                    <div class="exercises-filter">
+                        <button class="filter-btn active">全部</button>
+                        <button class="filter-btn">选择题</button>
+                        <button class="filter-btn">简答题</button>
+                        <button class="filter-btn">编程题</button>
+                    </div>
+                </div>
+                
+                <ul class="exercise-list">
+                    <li class="exercise-item">
+                        <div class="exercise-header">
+                            <div class="exercise-title">
+                                <i class="fas fa-question-circle"></i> 问题1：什么是过拟合？如何防止过拟合？
+                            </div>
+                            <div class="exercise-meta">
+                                <div class="difficulty">
+                                    <div class="difficulty-dot active"></div>
+                                    <div class="difficulty-dot active"></div>
+                                    <div class="difficulty-dot"></div>
                                 </div>
-                            </td>
-                            <td>
-                                《深度学习》第6章<br>
-                                《动手学深度学习》第3章
-                            </td>
-                            <td>实现简单神经网络</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第4周</span></td>
-                            <td>
-                                <div class="topic-title">深度学习计算</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="4" href="https://example.com/week4-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="4" href="https://example.com/week4-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
-                                </div>
-                            </td>
-                            <td>
-                                《深度学习》第7章<br>
-                                《动手学深度学习》第4章
-                            </td>
-                            <td>学习反向传播算法</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第5-6周</span></td>
-                            <td>
-                                <div class="topic-title">卷积神经网络</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="5" href="https://example.com/week5-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="5" href="https://example.com/week5-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
-                                </div>
-                            </td>
-                            <td>
-                                《深度学习》第9章<br>
-                                《动手学深度学习》第5章
-                            </td>
-                            <td>图像分类项目</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第7-8周</span></td>
-                            <td>
-                                <div class="topic-title">循环神经网络</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="7" href="https://example.com/week7-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="7" href="https://example.com/week7-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
-                                </div>
-                            </td>
-                            <td>
-                                《深度学习》第10章<br>
-                                《动手学深度学习》第6章
-                            </td>
-                            <td>文本生成项目</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第9-10周</span></td>
-                            <td>
-                                <div class="topic-title">优化算法</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="ppt" data-week="9" href="https://example.com/week9-ppt" target="_blank"><i class="fas fa-file-pdf"></i> 课件</a>
-                                    <a class="topic-resource" data-type="code" data-week="9" href="https://example.com/week9-code" target="_blank"><i class="fas fa-code"></i> 代码</a>
-                                </div>
-                            </td>
-                            <td>
-                                《深度学习》第8章<br>
-                                《动手学深度学习》第7章
-                            </td>
-                            <td>优化算法对比实验</td>
-                        </tr>
-                        <tr>
-                            <td><span class="week-number">第11-12周</span></td>
-                            <td>
-                                <div class="topic-title">综合项目实践</div>
-                                <div class="topic-resources">
-                                    <a class="topic-resource" data-type="guide" data-week="11" href="https://example.com/week11-guide" target="_blank"><i class="fas fa-file-pdf"></i> 指导书</a>
-                                    <a class="topic-resource" data-type="repo" data-week="11" href="https://example.com/week11-repo" target="_blank"><i class="fas fa-github"></i> 项目仓库</a>
-                                </div>
-                            </td>
-                            <td>综合应用各章知识</td>
-                            <td>完成综合项目并展示</td>
-                        </tr>
-                    </tbody>
-                </table>
+                                <span>简答题</span>
+                                <span>《深度学习》第5章</span>
+                            </div>
+                        </div>
+                        <div class="exercise-question">
+                            请解释什么是过拟合现象，并列举至少三种防止过拟合的方法。
+                        </div>
+                        <div class="exercise-actions">
+                            <button class="exercise-btn show-answer" data-id="101">
+                                <i class="fas fa-eye"></i> 查看答案
+                            </button>
+                            <button class="exercise-btn mark-completed" data-id="101" data-type="exercise" data-chapter="dl-5">
+                                <i class="fas fa-check"></i> 标记为已完成
+                            </button>
+                        </div>
+                        <div class="exercise-answer" id="answer-101">
+                            <div class="answer-content">
+                                过拟合是指模型在训练数据上表现良好，但在未见过的测试数据上表现不佳的现象。这通常是因为模型过于复杂，学习到了训练数据中的噪声而非潜在模式。
+
+                                防止过拟合的方法包括：
+                                1. 正则化（L1、L2正则化）
+                                2. 数据增强
+                                3. 提前停止训练
+                                4.  dropout技术
+                                5. 减少模型复杂度
+                            </div>
+                        </div>
+                    </li>
+                    <!-- 更多练习题... -->
+                </ul>
             </div>
         </div>
     </section>
@@ -1617,24 +1671,143 @@ if __name__ == "__main__":
         <div class="container">
             <div class="section-title animate">
                 <h3>讨论区</h3>
-                <p>按主题分类的讨论板块，促进学习交流与问题解决</p>
+                <p>交流学习心得，解决疑难问题，共同进步</p>
                 <div class="section-divider"></div>
             </div>
 
-            <div class="discussion-grid" id="discussion-container">
-                <!-- 讨论区内容将通过JS从Firebase加载 -->
-                <div class="discussion-card animate delay-1">
+            <button class="new-topic-btn animate delay-1" id="new-topic-btn">
+                <i class="fas fa-plus"></i> 发布新话题
+            </button>
+
+            <div class="topic-form animate delay-1" id="topic-form">
+                <div class="form-group">
+                    <label for="topic-title">话题标题</label>
+                    <input type="text" id="topic-title" class="form-control" placeholder="请输入话题标题">
+                </div>
+                <div class="form-group">
+                    <label for="topic-content">话题内容</label>
+                    <textarea id="topic-content" class="form-control" placeholder="请输入话题内容，详细描述你的问题或分享..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="topic-tags">标签</label>
+                    <input type="text" id="topic-tags" class="form-control" placeholder="请输入标签，用逗号分隔，如：机器学习,神经网络">
+                </div>
+                <button class="submit-btn" id="submit-topic">发布话题</button>
+            </div>
+
+            <div class="discussion-grid animate delay-2">
+                <div class="discussion-card">
                     <div class="discussion-header">
-                        <div class="discussion-title">加载中...</div>
-                        <div class="discussion-count">0个话题</div>
+                        <div class="discussion-title">基础理论</div>
+                        <div class="discussion-count">12个话题</div>
                     </div>
                     <div class="discussion-content">
-                        <div style="text-align: center; padding: 2rem; color: var(--dark-gray);">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 1rem;"></i>
-                            <p>正在获取讨论内容，请稍候...</p>
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">张三</div>
+                                <div class="post-date">2023-06-15</div>
+                            </div>
+                            <div class="post-title">如何理解反向传播算法？</div>
+                            <div class="post-excerpt">
+                                反向传播算法是神经网络训练的核心，但我对其数学原理还是不太理解，特别是链式法则的应用部分...
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 5条回复</span>
+                                <span><i class="fas fa-eye"></i> 42次查看</span>
+                            </div>
+                        </div>
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">李四</div>
+                                <div class="post-date">2023-06-12</div>
+                            </div>
+                            <div class="post-title">激活函数的选择有什么讲究？</div>
+                            <div class="post-excerpt">
+                                不同的激活函数适用于不同的场景，请问在实际应用中应该如何选择合适的激活函数？ReLU和sigmoid各有什么优缺点？
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 8条回复</span>
+                                <span><i class="fas fa-eye"></i> 67次查看</span>
+                            </div>
                         </div>
                     </div>
-                    <a class="discussion-link" href="discussion.html" target="_blank">查看全部话题</a>
+                    <a href="#" class="discussion-link">查看更多话题</a>
+                </div>
+
+                <div class="discussion-card">
+                    <div class="discussion-header">
+                        <div class="discussion-title">实践应用</div>
+                        <div class="discussion-count">8个话题</div>
+                    </div>
+                    <div class="discussion-content">
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">王五</div>
+                                <div class="post-date">2023-06-10</div>
+                            </div>
+                            <div class="post-title">PyTorch与TensorFlow哪个更适合初学者？</div>
+                            <div class="post-excerpt">
+                                作为机器学习初学者，想了解这两个框架的优缺点，以及哪个更适合入门学习...
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 12条回复</span>
+                                <span><i class="fas fa-eye"></i> 93次查看</span>
+                            </div>
+                        </div>
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">赵六</div>
+                                <div class="post-date">2023-06-08</div>
+                            </div>
+                            <div class="post-title">如何解决模型训练中的梯度消失问题？</div>
+                            <div class="post-excerpt">
+                                在训练深层神经网络时，遇到了梯度消失的问题，模型难以收敛，请问有什么有效的解决方法？
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 7条回复</span>
+                                <span><i class="fas fa-eye"></i> 58次查看</span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="#" class="discussion-link">查看更多话题</a>
+                </div>
+
+                <div class="discussion-card">
+                    <div class="discussion-header">
+                        <div class="discussion-title">资源分享</div>
+                        <div class="discussion-count">5个话题</div>
+                    </div>
+                    <div class="discussion-content">
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">钱七</div>
+                                <div class="post-date">2023-06-05</div>
+                            </div>
+                            <div class="post-title">推荐几个优质的机器学习视频课程</div>
+                            <div class="post-excerpt">
+                                整理了一些个人觉得不错的机器学习和深度学习视频课程，包括Coursera上的Andrew Ng课程和斯坦福大学的CS231n等...
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 4条回复</span>
+                                <span><i class="fas fa-eye"></i> 124次查看</span>
+                            </div>
+                        </div>
+                        <div class="discussion-post">
+                            <div class="post-header">
+                                <div class="post-author">孙八</div>
+                                <div class="post-date">2023-06-01</div>
+                            </div>
+                            <div class="post-title">分享一些实用的机器学习工具库</div>
+                            <div class="post-excerpt">
+                                除了主流框架外，还有一些非常实用的工具库可以提高工作效率，比如Scikit-learn、XGBoost等...
+                            </div>
+                            <div class="post-meta">
+                                <span><i class="fas fa-reply"></i> 6条回复</span>
+                                <span><i class="fas fa-eye"></i> 87次查看</span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="#" class="discussion-link">查看更多话题</a>
                 </div>
             </div>
         </div>
@@ -1644,590 +1817,400 @@ if __name__ == "__main__":
         <div class="container">
             <div class="footer-content">
                 <div class="footer-col">
-                    <h4>机器学习研讨平台</h4>
-                    <p>本平台旨在帮助实验室成员系统学习机器学习基础知识，通过教材学习、实践项目和讨论交流，提升机器学习                                        理论水平和应用能力。</p>
+                    <h4>关于我们</h4>
+                    <p>Link Intelligence Group 致力于研究和应用大模型等智能技术，释放联接中蕴含的巨大生产力。</p>
                     <div class="social-links">
-                        <a href="#" class="social-link"><i class="fab fa-weixin"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-weibo"></i></a>
-                        <a href="https://github.com/StuBoo3i/MyWebsite" class="social-link" target="_blank"><i class="fab fa-github"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-github"></i></a>
                         <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-weixin"></i></a>
                     </div>
                 </div>
-
                 <div class="footer-col">
                     <h4>快速链接</h4>
                     <ul class="footer-links">
-                        <li><a href="#resources">学习资源</a></li>
+                        <li><a href="#">研究平台</a></li>
+                        <li><a href="#">实验室介绍</a></li>
+                        <li><a href="#">研究方向</a></li>
+                        <li><a href="#">联系我们</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>学习资源</h4>
+                    <ul class="footer-links">
+                        <li><a href="#resources">教材与资料</a></li>
                         <li><a href="#schedule">学习进度</a></li>
                         <li><a href="#exercises">练习题</a></li>
                         <li><a href="#discussion">讨论区</a></li>
-                        <li><a href="../Website/home.html">返回主站</a></li>
                     </ul>
                 </div>
-
                 <div class="footer-col">
                     <h4>联系我们</h4>
                     <ul class="footer-links">
-                        <li><i class="fas fa-user mr-2"></i> 负责人：李老师</li>
-                        <li><i class="fas fa-envelope mr-2"></i> ml-platform@link-intel-group.org</li>
-                        <li><i class="fas fa-clock mr-2"></i> 答疑时间：每周五 15:00-17:00</li>
+                        <li><a href="mailto:contact@linkintelligence.com"><i class="fas fa-envelope"></i> contact@linkintelligence.com</a></li>
+                        <li><a href="tel:+86123456789"><i class="fas fa-phone"></i> +86 123 4567 89</a></li>
                     </ul>
                 </div>
             </div>
-
             <div class="copyright">
-                <p>&copy; 2025 Link Intelligence Group 版权所有</p>
+                &copy; 2023 Link Intelligence Group. 保留所有权利。
             </div>
         </div>
     </footer>
 
     <script>
-        console.log("Firebase是否加载成功：", typeof firebase !== 'undefined'); // 应输出true
-        // 1. Firebase初始化配置（替换为你的项目配置）
+        // 初始化Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyBGZzDvAMQl8zAFEHEathM8xHFNQUP_2yY",
-            authDomain: "ml-learning-platform.firebaseapp.com",
-            projectId: "ml-learning-platform",
-            storageBucket: "ml-learning-platform.firebasestorage.app",
-            messagingSenderId: "884631894408",
-            appId: "1:884631894408:web:4402e6a72f6f072060e23d"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         // 初始化Firebase
         const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const db = firebase.firestore(app);
-        const storage = firebase.storage(app);
 
-        // 2. DOM加载完成后执行
-        document.addEventListener('DOMContentLoaded', function() {
-            // 初始动画元素显示
-            setTimeout(() => {
-                document.querySelectorAll('.animate').forEach(el => {
-                    el.classList.add('visible');
+        // 登录功能
+        document.getElementById('github-login').addEventListener('click', () => {
+            const provider = new firebase.auth.GithubAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // 登录成功，获取用户信息
+                    const user = result.user;
+                    console.log("登录成功：", user);
+                    // 检查用户是否为新用户，若是则创建用户记录
+                    checkAndCreateUser(user);
+                })
+                .catch((error) => {
+                    console.error("登录失败：", error);
+                    alert("登录失败：" + error.message);
                 });
-            }, 100);
-            
-            // 3. 练习题答案显示/隐藏
-            document.querySelectorAll('.toggle-answer').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const answer = this.parentElement.nextElementSibling;
-                    answer.classList.toggle('visible');
-                    
-                    if (answer.classList.contains('visible')) {
-                        this.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏答案';
-                    } else {
-                        this.innerHTML = '<i class="fas fa-eye"></i> 查看答案';
-                    }
-                });
-            });
-            
-            // 4. 章节切换逻辑（《动手学深度学习》/《深度学习》章节点击）
-            document.querySelectorAll('.chapter-link').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const textbookType = this.closest('.chapters-list').getAttribute('data-textbook'); // d2l/dl
-                    const chapterNum = this.getAttribute('data-chapter'); // 章节号
-                    
-                    // 4.1 移除同教材下所有章节的active状态，给当前章节添加active
-                    this.closest('.chapters-list').querySelectorAll('.chapter-link').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    this.classList.add('active');
-                    
-                    // 4.2 切换对应教材的内容（描述+练习题）
-                    if (textbookType === 'd2l') {
-                        updateD2LChapterContent(chapterNum);
-                    } else if (textbookType === 'dl') {
-                        updateDLChapterContent(chapterNum);
-                    }
-                });
-            });
-            
-            // 5. 学习资源按钮逻辑（PDF下载/代码库/视频跳转）
-            document.querySelectorAll('.resource-link').forEach(link => {
-                link.addEventListener('click', async function(e) {
-                    const resourceType = this.getAttribute('data-resource');
-                    const textbookType = this.getAttribute('data-textbook');
-                    
-                    // 仅处理PDF下载（其他资源已设置target="_blank"直接跳转）
-                    if (resourceType === 'pdf' && textbookType) {
-                        e.preventDefault();
-                        try {
-                            // 从Firebase获取对应教材的PDF下载链接
-                            const pdfUrl = await fetchPdfFromFirebase(textbookType);
-                            if (pdfUrl) {
-                                // 创建临时a标签触发下载
-                                const downloadLink = document.createElement('a');
-                                downloadLink.href = pdfUrl;
-                                downloadLink.download = textbookType === 'd2l' 
-                                    ? '动手学深度学习-完整版.pdf' 
-                                    : '深度学习-DeepLearning.pdf';
-                                document.body.appendChild(downloadLink);
-                                downloadLink.click();
-                                document.body.removeChild(downloadLink);
-                            } else {
-                                alert('未找到对应的PDF资源，请联系管理员');
-                            }
-                        } catch (error) {
-                            console.error('PDF下载失败：', error);
-                            alert('PDF资源获取失败，请稍后重试');
-                        }
-                    }
-                });
-            });
-            
-            // 6. 练习题讨论按钮逻辑（跳转讨论区对应话题）
-            document.querySelectorAll('.discuss-exercise').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const exerciseId = this.getAttribute('data-exercise'); // 习题ID（如d2l-3-1）
-                    // 跳转到讨论区并定位到对应话题（假设讨论区页面为discussion.html）
-                    window.open(`discussion.html?exercise=${exerciseId}`, '_blank');
-                });
-            });
-            
-            // 7. 讨论区加载（从Firebase获取话题并渲染）
-            loadDiscussionsFromFirebase();
-            
-            // 8. 查看全部话题按钮跳转（固定跳转到discussion.html）
-            document.querySelectorAll('.discussion-link').forEach(link => {
-                link.setAttribute('href', 'discussion.html');
-                link.setAttribute('target', '_blank');
-            });
-            
-            // 9. 平滑滚动
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.offsetTop - 120,
-                            behavior: 'smooth'
-                        });
-                        
-                        // 更新活跃的子导航链接
-                        document.querySelectorAll('.subnav-link').forEach(link => {
-                            link.classList.remove('active');
-                        });
-                        if (this.classList.contains('subnav-link')) {
-                            this.classList.add('active');
-                        } else {
-                            const correspondingLink = document.querySelector(`.subnav-link[href="${targetId}"]`);
-                            if (correspondingLink) {
-                                correspondingLink.classList.add('active');
-                            }
-                        }
-                    }
-                });
-            });
-            
-            // 10. 滚动时更新活跃的子导航链接
-            window.addEventListener('scroll', function() {
-                const sections = document.querySelectorAll('section[id]');
-                let currentSection = '';
-                
-                sections.forEach(section => {
-                    const sectionTop = section.offsetTop - 150;
-                    const sectionHeight = section.offsetHeight;
-                    if (window.pageYOffset >= sectionTop && window.pageYOffset < sectionTop + sectionHeight) {
-                        currentSection = section.getAttribute('id');
-                    }
-                });
-                
-                document.querySelectorAll('.subnav-link').forEach(link => {
-                    link.classList.remove('active');
-                    if (link.getAttribute('href') === `#${currentSection}`) {
-                        link.classList.add('active');
-                    }
-                });
+        });
+
+        // 登出功能
+        document.getElementById('github-logout').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                console.log("已登出");
+                alert("已成功登出");
+            }).catch((error) => {
+                console.error("登出失败：", error);
             });
         });
 
-        // 11. 辅助函数：更新《动手学深度学习》章节内容
-        function updateD2LChapterContent(chapterNum) {
-            const descElement = document.getElementById('d2l-desc');
-            const exercisesElement = document.getElementById('d2l-exercises').querySelector('.exercise-list');
-            const exercisesHeader = document.getElementById('d2l-exercises').querySelector('.exercises-header h4');
-            
-            // 11.1 更新章节描述（按章节号匹配内容）
-            const d2lChapterDescs = {
-                '1': '第1章主要介绍深度学习的发展历程、应用场景及基本概念，帮助读者建立对深度学习的整体认知，为后续学习奠定基础。',
-                '2': '第2章涵盖深度学习所需的数学基础和PyTorch工具使用方法，包括张量操作、自动求导等核心知识点，是实践环节的关键准备。',
-                '3': '第3章深入讲解神经网络的基础结构，包括全连接层、激活函数、损失函数等核心组件，以及反向传播算法的实现原理。',
-                '4': '第4章聚焦深度学习计算的工程实现，包括模型构造、参数初始化、批处理优化等内容，提升模型训练效率。',
-                '5': '第5章系统介绍卷积神经网络（CNN）的原理与应用，包括卷积层、池化层、经典CNN模型（LeNet/AlexNet）等。',
-                '6': '第6章讲解循环神经网络（RNN）及其变体（LSTM/GRU），适用于序列数据处理，如文本生成、时序预测等场景。',
-                '7': '第7章分析深度学习中的优化算法，包括SGD、Adam、学习率调度等，解决模型训练中的收敛问题。',
-                '8': '第8章介绍计算性能优化方法，包括GPU加速、分布式训练、模型量化等，满足大规模数据训练需求。'
-            };
-            
-            // 11.2 更新章节练习题（按章节号匹配题目）
-            const d2lChapterExercises = {
-                '1': `
-                    <li class="exercise-item">
-                        <div class="exercise-header">
-                            <div class="exercise-title">
-                                <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                习题1.1：深度学习与传统机器学习的主要区别是什么？
-                            </div>
-                            <div class="exercise-meta">
-                                <div class="difficulty">
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot"></div>
-                                    <div class="difficulty-dot"></div>
-                                </div>
-                                <div>对应教材P23</div>
-                            </div>
-                        </div>
-                        <div class="exercise-question">
-                            从模型结构、特征提取方式、数据需求三个方面，分析深度学习与传统机器学习（如SVM、决策树）的核心区别，并举例说明深度学习的优势场景。
-                        </div>
-                        <div class="exercise-actions">
-                            <button class="exercise-btn toggle-answer">
-                                <i class="fas fa-eye"></i> 查看答案
-                            </button>
-                            <button class="exercise-btn discuss-exercise" data-exercise="d2l-1-1">
-                                <i class="fas fa-comment"></i> 讨论此题
-                            </button>
-                        </div>
-                        <div class="exercise-answer">
-                            <div class="answer-content">
-                                <p>深度学习与传统机器学习的核心区别如下：</p>
-                                <p>1. 模型结构：传统机器学习模型结构简单（如SVM为线性/核函数映射，决策树为树形分支），深度学习模型为多层神经网络（含数十至数千层），可构建复杂非线性映射；</p>
-                                <p>2. 特征提取方式：传统机器学习需人工设计特征（如图像的HOG特征、文本的TF-IDF），深度学习可自动从数据中学习特征（端到端学习）；</p>
-                                <p>3. 数据需求：传统机器学习在小数据集上表现较好，深度学习需大规模数据才能发挥优势（百万级以上样本）。</p>
-                                <p>深度学习优势场景：图像识别（ResNet）、自然语言处理（BERT）、语音识别等需复杂特征建模的任务。</p>
-                            </div>
-                        </div>
-                    </li>
-                `,
-                '2': `
-                    <li class="exercise-item">
-                        <div class="exercise-header">
-                            <div class="exercise-title">
-                                <i class="fas fa-code" style="color: var(--primary-color);"></i>
-                                习题2.1：使用PyTorch实现张量的基本运算（加法、乘法、矩阵乘法）
-                            </div>
-                            <div class="exercise-meta">
-                                <div class="difficulty">
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot"></div>
-                                </div>
-                                <div>对应教材P45</div>
-                            </div>
-                        </div>
-                        <div class="exercise-question">
-                            1. 创建两个形状为(3,4)的随机张量A和B；2. 实现A与B的元素加法、元素乘法；3. 实现A与B的转置（B.T）的矩阵乘法；4. 计算结果张量的均值和标准差。
-                        </div>
-                        <div class="exercise-actions">
-                            <button class="exercise-btn toggle-answer">
-                                <i class="fas fa-eye"></i> 查看答案
-                            </button>
-                            <button class="exercise-btn discuss-exercise" data-exercise="d2l-2-1">
-                                <i class="fas fa-comment"></i> 讨论此题
-                            </button>
-                        </div>
-                        <div class="exercise-answer">
-                            <div class="answer-content">
-                                <p>实现代码如下：</p>
-                                <pre>
-import torch
-
-# 1. 创建随机张量A和B（形状3x4）
-A = torch.randn(3, 4)
-B = torch.randn(3, 4)
-print("张量A:\\n", A)
-print("张量B:\\n", B)
-
-# 2. 元素加法、元素乘法
-add_result = A + B  # 或torch.add(A, B)
-mul_result = A * B  # 或torch.mul(A, B)
-print("\\n元素加法结果:\\n", add_result)
-print("元素乘法结果:\\n", mul_result)
-
-# 3. 矩阵乘法（A与B的转置，B.T形状为4x3）
-matmul_result = torch.matmul(A, B.T)  # 结果形状3x3
-print("\\n矩阵乘法结果（A × B.T）:\\n", matmul_result)
-
-# 4. 计算均值和标准差
-mean_val = matmul_result.mean()
-std_val = matmul_result.std()
-print("\\n矩阵乘法结果的均值:", mean_val.item())
-print("矩阵乘法结果的标准差:", std_val.item())
-                                </pre>
-                            </div>
-                        </div>
-                    </li>
-                `,
-                // 其他章节练习题可继续扩展，此处省略...
-                '3': document.getElementById('d2l-exercises').querySelector('.exercise-list').innerHTML // 保持原第3章题目
-            };
-            
-            // 更新DOM内容
-            descElement.textContent = d2lChapterDescs[chapterNum] || d2lChapterDescs['3'];
-            exercisesElement.innerHTML = d2lChapterExercises[chapterNum] || d2lChapterExercises['3'];
-            exercisesHeader.textContent = `第${chapterNum}章 练习题`;
-            
-            // 重新绑定新生成的练习题答案按钮和讨论按钮事件
-            bindExerciseEvents();
-        }
-
-        // 12. 辅助函数：更新《深度学习》章节内容
-        function updateDLChapterContent(chapterNum) {
-            const descElement = document.getElementById('dl-desc');
-            const exercisesElement = document.getElementById('dl-exercises').querySelector('.exercise-list');
-            const exercisesHeader = document.getElementById('dl-exercises').querySelector('.exercises-header h4');
-            
-            // 12.1 更新章节描述
-            const dlChapterDescs = {
-                '1': '第1章介绍深度学习的发展背景、基本定义及与其他领域的关系，梳理从人工智能到深度学习的技术演进脉络。',
-                '2': '第2章系统讲解线性代数核心知识，包括向量、矩阵、特征值分解、奇异值分解等，为理解神经网络提供数学基础。',
-                '3': '第3章涵盖概率与信息论基础，包括概率分布、期望、熵、交叉熵等概念，是模型损失函数设计的理论依据。',
-                '4': '第4章分析数值计算中的常见问题（如数值稳定性、梯度消失/爆炸），并提供解决方案（如归一化、梯度裁剪）。',
-                '5': '第5章讲解机器学习基础理论，包括监督/无监督学习、泛化能力、正则化、交叉验证等核心概念。',
-                '6': '第6章深入分析深度前馈网络的结构与原理，包括激活函数选择、权重初始化、批量归一化等关键技术。'
-            };
-            
-            // 12.2 更新章节练习题
-            const dlChapterExercises = {
-                '1': `
-                    <li class="exercise-item">
-                        <div class="exercise-header">
-                            <div class="exercise-title">
-                                <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                习题1.1：简述深度学习发展的三个关键阶段及代表性技术
-                            </div>
-                            <div class="exercise-meta">
-                                <div class="difficulty">
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot"></div>
-                                    <div class="difficulty-dot"></div>
-                                </div>
-                                <div>对应教材P31</div>
-                            </div>
-                        </div>
-                        <div class="exercise-question">
-                            梳理深度学习发展历程中的三个关键阶段，每个阶段说明时间范围、核心突破、代表性技术及应用场景。
-                        </div>
-                        <div class="exercise-actions">
-                            <button class="exercise-btn toggle-answer">
-                                <i class="fas fa-eye"></i> 查看答案
-                            </button>
-                            <button class="exercise-btn discuss-exercise" data-exercise="dl-1-1">
-                                <i class="fas fa-comment"></i> 讨论此题
-                            </button>
-                        </div>
-                        <div class="exercise-answer">
-                            <div class="answer-content">
-                                <p>深度学习发展的三个关键阶段如下：</p>
-                                <p>1. 早期探索阶段（2006年前）：时间范围1986-2006年，核心突破为反向传播算法提出与深度置信网络（DBN）实现，代表性技术为多层感知机（MLP）、DBN，应用场景限于小规模数据的简单分类任务；</p>
-                                <p>2. 快速发展阶段（2006-2012年）：时间范围2006-2012年，核心突破为DBN的高效训练方法、ReLU激活函数提出，代表性技术为卷积神经网络（CNN）、循环神经网络（RNN），应用场景扩展至图像识别、语音识别；</p>
-                                <p>3. 爆发阶段（2012年后）：时间范围2012年至今，核心突破为AlexNet在ImageNet竞赛夺冠、Transformer架构提出，代表性技术为深度CNN（ResNet）、Transformer（BERT/GPT）、生成式模型（GAN），应用场景覆盖计算机视觉、自然语言处理、自动驾驶等领域。</p>
-                            </div>
-                        </div>
-                    </li>
-                `,
-                '2': `
-                    <li class="exercise-item">
-                        <div class="exercise-header">
-                            <div class="exercise-title">
-                                <i class="fas fa-pencil-alt" style="color: var(--primary-color);"></i>
-                                习题2.1：证明矩阵的迹满足tr(AB) = tr(BA)（A为m×n矩阵，B为n×m矩阵）
-                            </div>
-                            <div class="exercise-meta">
-                                <div class="difficulty">
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot active"></div>
-                                    <div class="difficulty-dot"></div>
-                                </div>
-                                <div>对应教材P67</div>
-                            </div>
-                        </div>
-                        <div class="exercise-question">
-                            已知矩阵A∈R^(m×n)，矩阵B∈R^(n×m)，证明矩阵乘积的迹满足tr(AB) = tr(BA)，并举例验证（如A为2×3矩阵，B为3×2矩阵）。
-                        </div>
-                        <div class="exercise-actions">
-                            <button class="exercise-btn toggle-answer">
-                                <i class="fas fa-eye"></i> 查看答案
-                            </button>
-                            <button class="exercise-btn discuss-exercise" data-exercise="dl-2-1">
-                                <i class="fas fa-comment"></i> 讨论此题
-                            </button>
-                        </div>
-                        <div class="exercise-answer">
-                            <div class="answer-content">
-                                <p>证明过程如下：</p>
-                                <p>1. 定义矩阵元素：设A的元素为A=[a_ij]（i=1..m, j=1..n），B的元素为B=[b_jk]（j=1..n, k=1..m）；</p>
-                                <p>2. 计算AB的元素：AB为m×m矩阵，其(i,k)位置元素为(AB)_{ik} = Σ(j=1到n) a_ij * b_jk；</p>
-                                <p>3. 计算tr(AB)：迹为对角线元素之和，即tr(AB) = Σ(i=1到m) (AB)_{ii} = Σ(i=1到m) [Σ(j=1到n) a_ij * b_ji]；</p>
-                                <p>4. 计算BA的元素：BA为n×n矩阵，其(j,l)位置元素为(BA)_{jl} = Σ(i=1到m) b_ji * a_ij；</p>
-                                <p>5. 计算tr(BA)：tr(BA) = Σ(j=1到n) (BA)_{jj} = Σ(j=1到n) [Σ(i=1到m) b_ji * a_ij]；</p>
-                                <p>6. 交换求和顺序：tr(BA) = Σ(i=1到m) Σ(j=1到n) a_ij * b_ji = tr(AB)，证毕。</p>
-                                <p>举例验证：设A=[[1,2,3],[4,5,6]]（2×3），B=[[7,8],[9,10],[11,12]]（3×2）；</p>
-                                <p>AB=[[1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12]] = [[58, 64], [139, 154]]，tr(AB)=58+154=212；</p>
-                                <p>BA=[[7*1+8*4, 7*2+8*5, 7*3+8*6], [9*1+10*4, 9*2+10*5, 9*3+10*6], [11*1+12*4, 11*2+12*5, 11*3+12*6]] = [[39, 54, 69], [49, 68, 87], [59, 82, 105]]，tr(BA)=39+68+105=212，与tr(AB)相等。</p>
-                            </div>
-                        </div>
-                    </li>
-                `,
-                // 其他章节练习题可继续扩展，此处省略...
-                '5': document.getElementById('dl-exercises').querySelector('.exercise-list').innerHTML // 保持原第5章题目
-            };
-            
-            // 更新DOM内容
-            descElement.textContent = dlChapterDescs[chapterNum] || dlChapterDescs['5'];
-            exercisesElement.innerHTML = dlChapterExercises[chapterNum] || dlChapterExercises['5'];
-            exercisesHeader.textContent = `第${chapterNum}章 练习题`;
-            
-            // 重新绑定事件
-            bindExerciseEvents();
-        }
-
-        // 13. 辅助函数：重新绑定练习题相关事件（章节切换后新生成的元素）
-        function bindExerciseEvents() {
-            // 重新绑定答案显示/隐藏
-            document.querySelectorAll('.toggle-answer').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const answer = this.parentElement.nextElementSibling;
-                    answer.classList.toggle('visible');
-                    if (answer.classList.contains('visible')) {
-                        this.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏答案';
-                    } else {
-                        this.innerHTML = '<i class="fas fa-eye"></i> 查看答案';
+        // 检查并创建用户记录
+        function checkAndCreateUser(user) {
+            const usersRef = db.collection('users');
+            usersRef.doc(user.uid).get()
+                .then((doc) => {
+                    if (!doc.exists) {
+                        // 新用户，创建记录
+                        return usersRef.doc(user.uid).set({
+                            githubId: user.providerData[0].uid,
+                            username: user.displayName || user.providerData[0].username,
+                            email: user.email,
+                            avatar: user.photoURL,
+                            joinDate: new Date(),
+                            learningProgress: {}
+                        });
                     }
+                })
+                .then(() => {
+                    console.log("用户记录已创建或已存在");
+                })
+                .catch((error) => {
+                    console.error("创建用户记录失败：", error);
                 });
-            });
+        }
+
+        // 监听登录状态变化
+        auth.onAuthStateChanged((user) => {
+            const loginBtn = document.getElementById('github-login');
+            const logoutBtn = document.getElementById('github-logout');
+            const userInfo = document.getElementById('user-info');
+            const newTopicBtn = document.getElementById('new-topic-btn');
             
-            // 重新绑定讨论按钮
-            document.querySelectorAll('.discuss-exercise').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const exerciseId = this.getAttribute('data-exercise');
-                    window.open(`discussion.html?exercise=${exerciseId}`, '_blank');
-                });
+            if (user) {
+                // 已登录状态
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                userInfo.innerHTML = `
+                    <img src="${user.photoURL}" width="30" height="30" style="border-radius:50%">
+                    <span>${user.displayName || user.email}</span>
+                `;
+                // 加载用户学习数据
+                loadUserLearningData(user);
+                newTopicBtn.style.display = 'inline-flex';
+            } else {
+                // 未登录状态
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                userInfo.innerHTML = '';
+                newTopicBtn.style.display = 'none';
+                document.getElementById('topic-form').classList.remove('visible');
+                // 重置进度显示
+                resetProgressIndicators();
+            }
+        });
+
+        // 重置进度指示器
+        function resetProgressIndicators() {
+            document.querySelectorAll('.progress-indicator').forEach(indicator => {
+                indicator.textContent = '0%';
+            });
+            document.querySelectorAll('.progress-bar').forEach(bar => {
+                bar.style.width = '0%';
             });
         }
 
-        // 14. 辅助函数：从Firebase获取PDF下载链接（假设PDF存储在Storage的textbooks目录下）
-        async function fetchPdfFromFirebase(textbookType) {
-            try {
-                const fileName = textbookType === 'd2l' 
-                    ? 'textbooks/动手学深度学习-完整版.pdf' 
-                    : 'textbooks/深度学习-DeepLearning.pdf';
-                // 获取Storage中文件的临时下载链接（有效期1小时）
-                const storageRef = storage.ref(fileName);
-                const downloadUrl = await storageRef.getDownloadURL();
-                return downloadUrl;
-            } catch (error) {
-                console.error('获取PDF链接失败：', error);
-                return null;
+        // 加载用户学习数据
+        function loadUserLearningData(user) {
+            db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const learningProgress = doc.data().learningProgress || {};
+                        updateProgressIndicators(learningProgress);
+                    }
+                })
+                .catch((error) => {
+                    console.error("加载学习数据失败：", error);
+                });
+        }
+
+        // 更新进度指示器
+        function updateProgressIndicators(progressData) {
+            // 更新章节进度
+            for (const [chapterId, progress] of Object.entries(progressData)) {
+                if (progress.completed) {
+                    const progressBar = document.querySelector(`.progress-bar[data-chapter="${chapterId}"]`);
+                    const progressIndicator = document.querySelector(`.chapter-link[data-chapter="${chapterId.split('-')[1]}"] .progress-indicator`);
+                    
+                    if (progressBar) {
+                        progressBar.style.width = '100%';
+                    }
+                    if (progressIndicator) {
+                        progressIndicator.textContent = '100%';
+                    }
+                }
             }
         }
 
-        // 15. 辅助函数：从Firebase加载讨论区内容并渲染
-        async function loadDiscussionsFromFirebase() {
-            const discussionContainer = document.getElementById('discussion-container');
-            try {
-                // 从Firebase的discussions集合获取话题（按创建时间降序，取前3个分类）
-                const snapshot = await db.collection('discussions')
-                    .orderBy('createTime', 'desc')
-                    .limit(3)
-                    .get();
+        // 保存学习进度
+        function saveLearningProgress(chapterId, progressData) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert("请先登录");
+                return;
+            }
+
+            db.collection('users').doc(user.uid)
+                .update({
+                    [`learningProgress.${chapterId}`]: {
+                        completed: progressData.completed,
+                        lastPosition: progressData.position || '',
+                        updateTime: new Date()
+                    }
+                })
+                .then(() => {
+                    console.log("学习进度已保存");
+                    alert("学习进度已保存");
+                    // 更新UI
+                    const progressBar = document.querySelector(`.progress-bar[data-chapter="${chapterId}"]`);
+                    const progressIndicator = document.querySelector(`.chapter-link[data-chapter="${chapterId.split('-')[1]}"] .progress-indicator`);
+                    
+                    if (progressBar) {
+                        progressBar.style.width = progressData.completed ? '100%' : '50%';
+                    }
+                    if (progressIndicator) {
+                        progressIndicator.textContent = progressData.completed ? '100%' : '50%';
+                    }
+                })
+                .catch((error) => {
+                    console.error("保存失败：", error);
+                    alert("保存失败：" + error.message);
+                });
+        }
+
+        // 标记章节为已学习
+        document.querySelectorAll('.resource-link[data-resource="complete"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const textbook = this.getAttribute('data-textbook');
+                const chapter = this.getAttribute('data-chapter');
+                const chapterId = `${textbook}-${chapter}`;
                 
-                if (snapshot.empty) {
-                    discussionContainer.innerHTML = `
-                        <div class="discussion-card animate delay-1">
-                            <div class="discussion-header">
-                                <div class="discussion-title">暂无讨论话题</div>
-                                <div class="discussion-count">0个话题</div>
-                            </div>
-                            <div class="discussion-content">
-                                <div style="text-align: center; padding: 2rem; color: var(--dark-gray);">
-                                    <i class="fas fa-comment-dots" style="font-size: 1.5rem; margin-bottom: 1rem;"></i>
-                                    <p>目前暂无讨论话题，欢迎创建第一个话题！</p>
-                                </div>
-                            </div>
-                            <a class="discussion-link" href="discussion.html" target="_blank">进入讨论区</a>
-                        </div>
-                    `;
-                    return;
+                saveLearningProgress(chapterId, { completed: true });
+            });
+        });
+
+        // 标记练习为已完成
+        document.querySelectorAll('.mark-completed').forEach(button => {
+            button.addEventListener('click', function() {
+                const exerciseId = this.getAttribute('data-id');
+                const chapterId = this.getAttribute('data-chapter');
+                
+                saveExerciseResult(exerciseId, { completed: true, score: 100 });
+                
+                // 更新学习进度 - 完成练习后增加章节进度
+                updateChapterProgress(chapterId);
+            });
+        });
+
+        // 更新章节进度
+        function updateChapterProgress(chapterId) {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            // 获取该章节的总练习数和已完成数
+            // 这里简化处理，实际应用中应根据实际情况计算
+            saveLearningProgress(chapterId, { completed: true });
+        }
+
+        // 记录用户答题情况
+        function saveExerciseResult(exerciseId, result) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert("请先登录");
+                return;
+            }
+
+            return db.collection('users').doc(user.uid)
+                .collection('exerciseResults').doc(exerciseId)
+                .set({
+                    completed: result.completed,
+                    score: result.score,
+                    submitTime: new Date(),
+                    attempts: firebase.firestore.FieldValue.increment(1)
+                }, { merge: true })
+                .then(() => {
+                    console.log("答题情况已保存");
+                    alert("已标记为已完成");
+                })
+                .catch((error) => {
+                    console.error("保存答题情况失败：", error);
+                });
+        }
+
+        // 讨论区功能
+        document.getElementById('new-topic-btn').addEventListener('click', function() {
+            const topicForm = document.getElementById('topic-form');
+            topicForm.classList.toggle('visible');
+        });
+
+        // 提交新话题
+        document.getElementById('submit-topic').addEventListener('click', function() {
+            const title = document.getElementById('topic-title').value.trim();
+            const content = document.getElementById('topic-content').value.trim();
+            const tags = document.getElementById('topic-tags').value.split(',').map(tag => tag.trim());
+            
+            if (!title || !content) {
+                alert("请填写话题标题和内容");
+                return;
+            }
+            
+            createNewTopic(title, content, tags)
+                .then(() => {
+                    alert("话题发布成功");
+                    // 清空表单
+                    document.getElementById('topic-title').value = '';
+                    document.getElementById('topic-content').value = '';
+                    document.getElementById('topic-tags').value = '';
+                    // 隐藏表单
+                    document.getElementById('topic-form').classList.remove('visible');
+                    // 刷新话题列表（实际应用中应实现）
+                })
+                .catch((error) => {
+                    console.error("发布话题失败：", error);
+                    alert("发布话题失败：" + error.message);
+                });
+        });
+
+        // 发布新话题
+        function createNewTopic(title, content, tags) {
+            const user = auth.currentUser;
+            if (!user) {
+                alert("请先登录");
+                return Promise.reject("未登录");
+            }
+
+            return db.collection('topics').add({
+                title: title,
+                content: content,
+                tags: tags,
+                authorId: user.uid,
+                authorName: user.displayName || user.providerData[0].username,
+                authorAvatar: user.photoURL,
+                createTime: new Date(),
+                updateTime: new Date(),
+                replyCount: 0,
+                viewCount: 0
+            });
+        }
+
+        // 显示/隐藏答案
+        document.querySelectorAll('.show-answer').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const answerElement = document.getElementById(`answer-${id}`);
+                answerElement.classList.toggle('visible');
+                
+                if (answerElement.classList.contains('visible')) {
+                    this.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏答案';
+                } else {
+                    this.innerHTML = '<i class="fas fa-eye"></i> 查看答案';
                 }
+            });
+        });
+
+        // 滚动动画
+        function checkVisibility() {
+            const elements = document.querySelectorAll('.animate');
+            
+            elements.forEach(element => {
+                const rect = element.getBoundingClientRect();
+                const windowHeight = window.innerHeight || document.documentElement.clientHeight;
                 
-                // 清空容器，渲染获取到的话题
-                discussionContainer.innerHTML = '';
-                let delay = 1;
-                snapshot.forEach(doc => {
-                    const topicData = doc.data();
-                    const topicHtml = `
-                        <div class="discussion-card animate delay-${delay}">
-                            <div class="discussion-header">
-                                <div class="discussion-title">${topicData.title}</div>
-                                <div class="discussion-count">${topicData.replyCount || 0}个回复</div>
-                            </div>
-                            <div class="discussion-content">
-                                ${topicData.posts && topicData.posts.length > 0 
-                                    ? topicData.posts.slice(0, 2).map((post, idx) => `
-                                        <div class="discussion-post ${idx === 1 ? 'last' : ''}">
-                                            <div class="post-header">
-                                                <div class="post-author">${post.authorName}</div>
-                                                <div class="post-date">${formatDate(post.createTime.toDate())}</div>
-                                            </div>
-                                            <div class="post-title">${post.postTitle}</div>
-                                            <div class="post-excerpt">${post.content}</div>
-                                            <div class="post-meta">
-                                                <div><i class="fas fa-comment"></i> ${post.replyCount || 0}条回复</div>
-                                                <div><i class="fas fa-eye"></i> ${post.viewCount || 0}次浏览</div>
-                                            </div>
-                                        </div>
-                                    `).join('') 
-                                    : `
-                                        <div class="discussion-post">
-                                            <div style="text-align: center; padding: 1rem; color: var(--dark-gray);">
-                                                <p>该话题暂无内容</p>
-                                            </div>
-                                        </div>
-                                    `
-                                }
-                            </div>
-                            <a class="discussion-link" href="discussion.html?topicId=${doc.id}" target="_blank">查看全部话题</a>
-                        </div>
-                    `;
-                    discussionContainer.innerHTML += topicHtml;
-                    delay = Math.min(delay + 1, 3); // 控制动画延迟不超过3
+                if (rect.top <= windowHeight * 0.8) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        // 初始检查
+        checkVisibility();
+        
+        // 滚动时检查
+        window.addEventListener('scroll', checkVisibility);
+
+        // 章节切换
+        document.querySelectorAll('.chapter-link').forEach(link => {
+            link.addEventListener('click', function() {
+                // 移除同组中其他链接的active类
+                const parentList = this.closest('.chapters-list');
+                parentList.querySelectorAll('.chapter-link').forEach(item => {
+                    item.classList.remove('active');
                 });
                 
-                // 给最后一个讨论卡片添加延迟
-                if (snapshot.size > 1) {
-                    discussionContainer.lastChild.classList.add(`delay-${delay}`);
+                // 给当前点击的链接添加active类
+                this.classList.add('active');
+                
+                // 在实际应用中，这里可以加载对应章节的内容
+                const textbook = parentList.getAttribute('data-textbook');
+                const chapter = this.getAttribute('data-chapter');
+                console.log(`加载${textbook}教材的第${chapter}章内容`);
+                
+                // 如果用户已登录，更新最后学习位置
+                const user = auth.currentUser;
+                if (user) {
+                    saveLearningProgress(`${textbook}-${chapter}`, { 
+                        completed: false, 
+                        position: `section-${new Date().getTime()}` 
+                    });
                 }
-            } catch (error) {
-                console.error('加载讨论区失败：', error);
-                discussionContainer.innerHTML = `
-                    <div class="discussion-card animate delay-1">
-                        <div class="discussion-header">
-                            <div class="discussion-title">加载失败</div>
-                            <div class="discussion-count">0个话题</div>
-                        </div>
-                        <div class="discussion-content">
-                            <div style="text-align: center; padding: 2rem; color: var(--accent-color);">
-                                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; margin-bottom: 1rem;"></i>
-                                <p>讨论区内容加载失败，请刷新页面重试</p>
-                            </div>
-                        </div>
-                        <a class="discussion-link" href="discussion.html" target="_blank">尝试进入讨论区</a>
-                    </div>
-                `;
-            }
-        }
-
-        // 16. 辅助函数：格式化日期（Firebase时间戳转本地日期）
-        function formatDate(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
+            });
+        });
     </script>
 </body>
 </html>
