@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>讨论区 - 机器学习研讨平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 复用原有Firebase兼容脚本 -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <style>
+        /* 1. 复用原有全局样式变量，保证视觉统一 */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --background-color: #f5f7fa;
+            --text-color: #333;
+            --light-gray: #ecf0f1;
+            --dark-gray: #7f8c8d;
+            --accent-color: #e74c3c;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(52, 152, 219, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(44, 62, 80, 0.05) 0%, transparent 20%);
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* 2. 复用原有头部样式，确保导航一致 */
+        header {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        .header-glow {
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 60%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(52, 152, 219, 0.2) 0%, transparent 70%);
+            transform: rotate(30deg);
+            z-index: 1;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: white;
+        }
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+        .logo-text h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        .logo-text p {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+        }
+        .auth-nav-container {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: nowrap;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            position: relative;
+            padding: 0.5rem 0;
+        }
+        .nav-link:hover {
+            color: white;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: var(--transition);
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .auth-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+        .auth-btn:hover {
+            background-color: #2980b9;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+        }
+
+        /* 3. 子导航样式（指向主页面关键功能） */
+        .subnav {
+            background-color: white;
+            border-bottom: 1px solid var(--light-gray);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .subnav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .breadcrumbs {
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+        .breadcrumbs a {
+            color: var(--dark-gray);
+            text-decoration: none;
+        }
+        .breadcrumbs a:hover {
+            color: var(--primary-color);
+        }
+        .breadcrumbs span {
+            margin: 0 0.5rem;
+            color: var(--primary-color);
+        }
+        .subnav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .subnav-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+        .subnav-link:hover, .subnav-link.active {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--primary-color);
+        }
+
+        /* 4. 讨论区主体样式 */
+        .discussion-page {
+            padding: 3rem 0;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .create-topic-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+        .create-topic-btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* 筛选栏：标签分类 + 排序 */
+        .filter-bar {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .tag-filter {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        .filter-label {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+        .tag-btn {
+            background: none;
+            border: 1px solid var(--light-gray);
+            color: var(--dark-gray);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+        .tag-btn:hover, .tag-btn.active {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        .sort-filter {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            margin-left: auto;
+        }
+        .sort-btn {
+            background: none;
+            border: 1px solid var(--light-gray);
+            color: var(--dark-gray);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .sort-btn:hover, .sort-btn.active {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* 话题列表样式 */
+        .topics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .topic-item {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .topic-item:hover {
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+        }
+        /* 话题头部（点击展开/收起） */
+        .topic-header {
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        .topic-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        .topic-title {
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .topic-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            background-color: rgba(52, 152, 219, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+        .topic-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--dark-gray);
+        }
+        .topic-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .topic-toggle {
+            color: var(--dark-gray);
+            transition: var(--transition);
+        }
+        .topic-toggle.rotate {
+            transform: rotate(180deg);
+            color: var(--primary-color);
+        }
+
+        /* 话题详情（默认隐藏） */
+        .topic-content {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        .topic-content.expand {
+            padding: 1.5rem;
+            max-height: 2000px; /* 足够大的高度容纳内容 */
+        }
+        .topic-desc {
+            color: var(--text-color);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .topic-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        .topic-action-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.9rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+        .topic-action-btn:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        /* 回复区 */
+        .replies-section {
+            margin-top: 1rem;
+        }
+        .replies-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .replies-count {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+        .reply-form {
+            background-color: var(--background-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .reply-input {
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 100px;
+        }
+        .reply-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .reply-submit {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .reply-submit:hover {
+            background-color: #2980b9;
+        }
+        .replies-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .reply-item {
+            padding: 1rem;
+            background-color: var(--background-color);
+            border-radius: 8px;
+        }
+        .reply-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .reply-author {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .reply-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .reply-date {
+            font-size: 0.8rem;
+            color: var(--dark-gray);
+        }
+        .reply-content {
+            font-size: 0.95rem;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* 提问弹窗（默认隐藏） */
+        .topic-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .topic-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            color: var(--dark-gray);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .modal-close:hover {
+            color: var(--accent-color);
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .topic-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-label {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+        .form-input {
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .form-textarea {
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 150px;
+        }
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .tag-options {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .tag-option {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+        .form-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        .form-submit:hover {
+            background-color: #2980b9;
+        }
+
+        /* 页脚样式（复用原有） */
+        footer {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 4rem 0 2rem;
+            margin-top: 4rem;
+        }
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+        .footer-col h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 0.8rem;
+        }
+        .footer-col h4::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+        .footer-col p {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .social-link:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+        .footer-links {
+            list-style: none;
+        }
+        .footer-links li {
+            margin-bottom: 0.8rem;
+        }
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+        .footer-links a:hover {
+            color: white;
+            padding-left: 5px;
+        }
+        .copyright {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1.5rem;
+                text-align: center;
+            }
+            .auth-nav-container {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1rem;
+            }
+            .subnav-content {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .sort-filter {
+                margin-left: 0;
+                width: 100%;
+                justify-content: space-between;
+            }
+            .topic-meta {
+                flex-wrap: wrap;
+                gap: 0.8rem;
+            }
+            .modal-content {
+                padding: 1.5rem;
+            }
+        }
+        @media (max-width: 576px) {
+            .container {
+                padding: 0 1rem;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .tag-filter {
+                flex-wrap: wrap;
+            }
+            .topic-title {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 1. 复用原有头部导航 -->
+    <header>
+        <div class="header-glow"></div>
+        <div class="container header-content">
+            <a href="../Website/home.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Link Intelligence Group</h1>
+                    <p>利用大模型等智能技术，释放联接中蕴含的巨大生产力</p>
+                </div>
+            </a>
+            <div class="auth-nav-container">
+                <nav class="nav-links">
+                    <a href="../Website/home.html#projects" class="nav-link">研究平台</a>
+                    <a href="../Website/home.html#lab" class="nav-link">实验室介绍</a>
+                    <a href="../Website/home.html#research" class="nav-link">研究方向</a>
+                    <a href="../Website/home.html#contact" class="nav-link">联系我们</a>
+                </nav>
+                <div class="auth-buttons">
+                    <div id="user-info" class="user-info"></div>
+                    <button id="github-login" class="auth-btn">
+                        <i class="fab fa-github"></i> GitHub登录
+                    </button>
+                    <button id="github-logout" class="auth-btn" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i> 退出登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. 子导航：指向主页面和讨论区 -->
+    <div class="subnav">
+        <div class="container subnav-content">
+            <div class="breadcrumbs">
+                <a href="../Website/home.html">首页</a>
+                <span>></span>
+                <a href="../Website/home.html#projects">研究平台</a>
+                <span>></span>
+                <span>讨论区</span>
+            </div>
+            <div class="subnav-links">
+                <a href="../Website/ML/home.html" class="subnav-link">
+                    <i class="fas fa-book"></i> 返回学习平台
+                </a>
+                <a href="#" class="subnav-link active">
+                    <i class="fas fa-comments"></i> 讨论区
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 讨论区主体内容 -->
+    <section class="discussion-page">
+        <div class="container">
+            <!-- 页面头部：标题 + 提问按钮 -->
+            <div class="page-header">
+                <h2 class="page-title">
+                    <i class="fas fa-comments" style="color: var(--primary-color);"></i>
+                    机器学习研讨讨论区
+                </h2>
+                <button id="create-topic-btn" class="create-topic-btn" disabled>
+                    <i class="fas fa-plus"></i> 发布提问/分享
+                </button>
+            </div>
+
+            <!-- 筛选栏：标签分类（理论基础/代码实现/学习资料） + 排序（最新/最热） -->
+            <div class="filter-bar">
+                <div class="tag-filter">
+                    <span class="filter-label">标签筛选：</span>
+                    <button class="tag-btn active" data-tag="all">全部</button>
+                    <button class="tag-btn" data-tag="theory">理论基础</button>
+                    <button class="tag-btn" data-tag="code">代码实现</button>
+                    <button class="tag-btn" data-tag="material">学习资料分享</button>
+                </div>
+                <div class="sort-filter">
+                    <span class="filter-label">排序方式：</span>
+                    <button class="sort-btn active" data-sort="latest">
+                        <i class="fas fa-clock"></i> 最新发布
+                    </button>
+                    <button class="sort-btn" data-sort="hot">
+                        <i class="fas fa-fire"></i> 最多点赞
+                    </button>
+                </div>
+            </div>
+
+            <!-- 话题列表（动态加载） -->
+            <div class="topics-list" id="topics-container">
+                <!-- 加载中状态 -->
+                <div class="topic-item">
+                    <div class="topic-header">
+                        <div class="topic-header-left">
+                            <div class="topic-title">加载中...</div>
+                            <div class="topic-meta">
+                                <div class="topic-meta-item">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <span>正在获取讨论内容</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. 提问/分享弹窗 -->
+    <div class="topic-modal" id="topic-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="modal-title">发布提问/分享</h3>
+            <form class="topic-form" id="topic-form">
+                <div class="form-group">
+                    <label class="form-label" for="topic-title">标题</label>
+                    <input type="text" class="form-input" id="topic-title" placeholder="请输入标题（如：关于反向传播算法的疑问）" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="topic-content">内容</label>
+                    <textarea class="form-textarea" id="topic-content" placeholder="请详细描述你的问题或分享内容（如：在推导反向传播时，链式法则的应用步骤有疑问...）" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">选择标签（必选）</label>
+                    <div class="tag-options">
+                        <label class="tag-option">
+                            <input type="radio" name="topic-tag" value="theory" required> 理论基础
+                        </label>
+                        <label class="tag-option">
+                            <input type="radio" name="topic-tag" value="code"> 代码实现
+                        </label>
+                        <label class="tag-option">
+                            <input type="radio" name="topic-tag" value="material"> 学习资料分享
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="form-submit">发布</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. 复用原有页脚 -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col">
+                    <h4>机器学习研讨平台</h4>
+                    <p>本平台旨在帮助实验室成员系统学习机器学习基础知识，通过教材学习、实践项目和讨论交流，提升机器学习理论水平和应用能力。</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><i class="fab fa-weixin"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-weibo"></i></a>
+                        <a href="https://github.com/StuBoo3i/MyWebsite" class="social-link" target="_blank"><i class="fab fa-github"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>快速链接</h4>
+                    <ul class="footer-links">
+                        <li><a href="../Website/ML/home.html#resources">学习资源</a></li>
+                        <li><a href="../Website/ML/home.html#schedule">学习进度</a></li>
+                        <li><a href="../Website/ML/home.html#exercises">练习题</a></li>
+                        <li><a href="#">讨论区</a></li>
+                        <li><a href="../Website/home.html">返回主站</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>联系我们</h4>
+                    <ul class="footer-links">
+                        <li><i class="fas fa-user mr-2"></i> 负责人：李老师</li>
+                        <li><i class="fas fa-envelope mr-2"></i> ml-platform@link-intel-group.org</li>
+                        <li><i class="fas fa-clock mr-2"></i> 答疑时间：每周五 15:00-17:00</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2025 Link Intelligence Group 版权所有</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 6. Firebase 与交互逻辑 -->
+    <script>
+        // 初始化Firebase（复用原有配置）
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGZzDvAMQl8zAFEHEathM8xHFNQUP_2yY",
+            authDomain: "ml-learning-platform.firebaseapp.com",
+            projectId: "ml-learning-platform",
+            storageBucket: "ml-learning-platform.firebasestorage.app",
+            messagingSenderId: "884631894408",
+            appId: "1:884631894408:web:4402e6a72f6f072060e23d"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(app);
+        const auth = firebase.auth(app);
+
+        // 全局变量：当前筛选标签、排序方式、话题列表数据
+        let currentTag = "all";
+        let currentSort = "latest";
+        let topicsData = [];
+
+        // DOM元素
+        const topicsContainer = document.getElementById("topics-container");
+        const createTopicBtn = document.getElementById("create-topic-btn");
+        const topicModal = document.getElementById("topic-modal");
+        const modalClose = document.getElementById("modal-close");
+        const topicForm = document.getElementById("topic-form");
+        const tagBtns = document.querySelectorAll(".tag-btn");
+        const sortBtns = document.querySelectorAll(".sort-btn");
+        const userInfoEl = document.getElementById("user-info");
+        const loginBtn = document.getElementById("github-login");
+        const logoutBtn = document.getElementById("github-logout");
+
+        // 1. 登录状态监听（复用原有逻辑）
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // 已登录：显示用户信息，启用提问按钮
+                loginBtn.style.display = "none";
+                logoutBtn.style.display = "block";
+                userInfoEl.innerHTML = `
+                    <img src="${user.photoURL}" width="30" height="30" style="border-radius:50%">
+                    <span>${user.displayName || user.providerData[0].username}</span>
+                `;
+                createTopicBtn.disabled = false;
+                // 加载话题数据
+                loadTopics();
+            } else {
+                // 未登录：隐藏用户信息，禁用提问按钮
+                loginBtn.style.display = "block";
+                logoutBtn.style.display = "none";
+                userInfoEl.innerHTML = "";
+                createTopicBtn.disabled = true;
+                createTopicBtn.title = "请先登录后发布内容";
+                // 显示登录提示
+                topicsContainer.innerHTML = `
+                    <div class="topic-item">
+                        <div class="topic-header">
+                            <div class="topic-header-left">
+                                <div class="topic-title">
+                                    <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+                                    请登录后查看讨论内容
+                                </div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <span>登录后可提问、回复和浏览完整讨论</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // 2. GitHub登录/登出（复用原有逻辑）
+        loginBtn.addEventListener("click", () => {
+            const provider = new firebase.auth.GithubAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => console.log("登录成功：", result.user))
+                .catch((error) => console.error("登录失败：", error));
+        });
+        logoutBtn.addEventListener("click", () => {
+            auth.signOut().then(() => console.log("已登出"));
+        });
+
+        // 3. 加载话题数据（从Firebase获取，支持筛选和排序）
+        async function loadTopics() {
+            try {
+                // 从Firebase获取话题（按创建时间降序）
+                const snapshot = await db.collection("topics")
+                    .orderBy("createTime", "desc")
+                    .get();
+                
+                if (snapshot.empty) {
+                    topicsContainer.innerHTML = `
+                        <div class="topic-item">
+                            <div class="topic-header">
+                                <div class="topic-header-left">
+                                    <div class="topic-title">暂无讨论话题</div>
+                                    <div class="topic-meta">
+                                        <div class="topic-meta-item">
+                                            <i class="fas fa-comment-dots"></i>
+                                            <span>点击"发布提问/分享"创建第一个话题</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 格式化话题数据
+                topicsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    createTime: doc.data().createTime.toDate(), // 转换为Date对象
+                    likeCount: doc.data().likeCount || 0, // 点赞数（默认0）
+                    replies: [] // 回复列表（后续加载）
+                }));
+
+                // 加载每个话题的回复
+                for (const topic of topicsData) {
+                    const repliesSnapshot = await db.collection("topics")
+                        .doc(topic.id)
+                        .collection("replies")
+                        .orderBy("createTime", "asc")
+                        .get();
+                    topic.replies = repliesSnapshot.docs.map(replyDoc => ({
+                        id: replyDoc.id,
+                        ...replyDoc.data(),
+                        createTime: replyDoc.data().createTime.toDate()
+                    }));
+                }
+
+                // 筛选和排序后渲染
+                filterAndSortTopics();
+            } catch (error) {
+                console.error("加载话题失败：", error);
+                topicsContainer.innerHTML = `
+                    <div class="topic-item">
+                        <div class="topic-header">
+                            <div class="topic-header-left">
+                                <div class="topic-title" style="color: var(--accent-color);">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    话题加载失败
+                                </div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <span>请刷新页面重试</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 4. 筛选（标签）和排序（最新/最热）
+        function filterAndSortTopics() {
+            // 1. 标签筛选
+            let filteredTopics = topicsData;
+            if (currentTag !== "all") {
+                filteredTopics = topicsData.filter(topic => topic.tags.includes(currentTag));
+            }
+
+            // 2. 排序
+            let sortedTopics = filteredTopics;
+            if (currentSort === "latest") {
+                // 按创建时间降序（最新在前）
+                sortedTopics.sort((a, b) => b.createTime - a.createTime);
+            } else if (currentSort === "hot") {
+                // 按点赞数降序（最热在前）
+                sortedTopics.sort((a, b) => b.likeCount - a.likeCount);
+            }
+
+            // 3. 渲染话题列表
+            renderTopics(sortedTopics);
+        }
+
+        // 5. 渲染话题列表
+        function renderTopics(topics) {
+            if (topics.length === 0) {
+                topicsContainer.innerHTML = `
+                    <div class="topic-item">
+                        <div class="topic-header">
+                            <div class="topic-header-left">
+                                <div class="topic-title">暂无匹配话题</div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <span>可尝试切换标签或发布新话题</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 拼接话题HTML
+            let topicsHtml = "";
+            topics.forEach(topic => {
+                // 转换标签为中文显示
+                const tagMap = {
+                    "theory": "理论基础",
+                    "code": "代码实现",
+                    "material": "学习资料分享"
+                };
+                const topicTag = topic.tags[0]; // 单个标签（按需求可扩展多标签）
+                const tagText = tagMap[topicTag] || topicTag;
+
+                // 格式化日期
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    return `${year}-${month}-${day}`;
+                };
+
+                // 回复数量
+                const replyCount = topic.replies.length;
+
+                // 话题HTML
+                topicsHtml += `
+                    <div class="topic-item" data-topic-id="${topic.id}">
+                        <!-- 话题头部（点击展开） -->
+                        <div class="topic-header" data-topic-id="${topic.id}">
+                            <div class="topic-header-left">
+                                <div class="topic-title">
+                                    ${topic.title}
+                                    <span class="topic-tag">${tagText}</span>
+                                </div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <i class="fas fa-user"></i>
+                                        <span>${topic.authorName}</span>
+                                    </div>
+                                    <div class="topic-meta-item">
+                                        <i class="fas fa-calendar"></i>
+                                        <span>${formatDate(topic.createTime)}</span>
+                                    </div>
+                                    <div class="topic-meta-item">
+                                        <i class="fas fa-thumbs-up"></i>
+                                        <span>${topic.likeCount} 点赞</span>
+                                    </div>
+                                    <div class="topic-meta-item">
+                                        <i class="fas fa-reply"></i>
+                                        <span>${replyCount} 回复</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="topic-toggle">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+
+                        <!-- 话题详情（默认隐藏） -->
+                        <div class="topic-content" data-topic-id="${topic.id}">
+                            <div class="topic-desc">${topic.content}</div>
+                            
+                            <!-- 话题操作（点赞） -->
+                            <div class="topic-actions">
+                                <button class="topic-action-btn like-btn" data-topic-id="${topic.id}">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span>点赞（${topic.likeCount}）</span>
+                                </button>
+                            </div>
+
+                            <!-- 回复区 -->
+                            <div class="replies-section">
+                                <div class="replies-header">
+                                    <div class="replies-count">${replyCount} 条回复</div>
+                                </div>
+
+                                <!-- 回复输入框 -->
+                                <form class="reply-form" data-topic-id="${topic.id}">
+                                    <textarea class="reply-input" placeholder="请输入你的回复..." required></textarea>
+                                    <button type="submit" class="reply-submit">提交回复</button>
+                                </form>
+
+                                <!-- 回复列表 -->
+                                <div class="replies-list" data-topic-id="${topic.id}">
+                                    ${replyCount > 0 
+                                        ? topic.replies.map(reply => `
+                                            <div class="reply-item" data-reply-id="${reply.id}">
+                                                <div class="reply-header">
+                                                    <div class="reply-author">
+                                                        <img src="${reply.authorAvatar}" class="reply-avatar" alt="用户头像">
+                                                        <span>${reply.authorName}</span>
+                                                    </div>
+                                                    <div class="reply-date">${formatDate(reply.createTime)}</div>
+                                                </div>
+                                                <div class="reply-content">${reply.content}</div>
+                                            </div>
+                                        `).join("")
+                                        : `<div class="reply-item"><div class="reply-content">暂无回复，快来抢沙发～</div></div>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 渲染到容器
+            topicsContainer.innerHTML = topicsHtml;
+
+            // 绑定话题展开/收起事件
+            document.querySelectorAll(".topic-header").forEach(header => {
+                header.addEventListener("click", (e) => {
+                    const topicId = e.currentTarget.getAttribute("data-topic-id");
+                    const contentEl = document.querySelector(`.topic-content[data-topic-id="${topicId}"]`);
+                    const toggleEl = e.currentTarget.querySelector(".topic-toggle");
+                    
+                    contentEl.classList.toggle("expand");
+                    toggleEl.classList.toggle("rotate");
+                });
+            });
+
+            // 绑定点赞事件
+            document.querySelectorAll(".like-btn").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const topicId = e.currentTarget.getAttribute("data-topic-id");
+                    const user = auth.currentUser;
+                    if (!user) return;
+
+                    try {
+                        // 更新Firebase中的点赞数（自增1）
+                        const topicRef = db.collection("topics").doc(topicId);
+                        await topicRef.update({
+                            likeCount: firebase.firestore.FieldValue.increment(1)
+                        });
+
+                        // 更新本地数据和UI
+                        const topic = topicsData.find(t => t.id === topicId);
+                        if (topic) {
+                            topic.likeCount += 1;
+                            e.currentTarget.innerHTML = `
+                                <i class="fas fa-thumbs-up"></i>
+                                <span>点赞（${topic.likeCount}）</span>
+                            `;
+                            // 重新渲染列表（保持当前筛选和排序）
+                            filterAndSortTopics();
+                        }
+                    } catch (error) {
+                        console.error("点赞失败：", error);
+                        alert("点赞失败，请稍后重试");
+                    }
+                });
+            });
+
+            // 绑定回复提交事件
+            document.querySelectorAll(".reply-form").forEach(form => {
+                form.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const topicId = e.currentTarget.getAttribute("data-topic-id");
+                    const replyContent = e.currentTarget.querySelector(".reply-input").value.trim();
+                    const user = auth.currentUser;
+                    if (!user || !replyContent) return;
+
+                    try {
+                        // 1. 保存回复到Firebase
+                        const replyRef = db.collection("topics")
+                            .doc(topicId)
+                            .collection("replies")
+                            .add({
+                                content: replyContent,
+                                authorId: user.uid,
+                                authorName: user.displayName || user.providerData[0].username,
+                                authorAvatar: user.photoURL,
+                                createTime: new Date()
+                            });
+
+                        // 2. 更新话题的回复数量
+                        const topicRef = db.collection("topics").doc(topicId);
+                        await topicRef.update({
+                            replyCount: firebase.firestore.FieldValue.increment(1)
+                        });
+
+                        // 3. 更新本地数据和UI
+                        const topic = topicsData.find(t => t.id === topicId);
+                        if (topic) {
+                            const newReply = {
+                                id: (await replyRef).id,
+                                content: replyContent,
+                                authorId: user.uid,
+                                authorName: user.displayName || user.providerData[0].username,
+                                authorAvatar: user.photoURL,
+                                createTime: new Date()
+                            };
+                            topic.replies.push(newReply);
+                            // 清空输入框
+                            e.currentTarget.querySelector(".reply-input").value = "";
+                            // 重新渲染列表
+                            filterAndSortTopics();
+                            // 保持当前话题展开
+                            const contentEl = document.querySelector(`.topic-content[data-topic-id="${topicId}"]`);
+                            const toggleEl = document.querySelector(`.topic-header[data-topic-id="${topicId}"] .topic-toggle`);
+                            contentEl.classList.add("expand");
+                            toggleEl.classList.add("rotate");
+                        }
+                    } catch (error) {
+                        console.error("提交回复失败：", error);
+                        alert("回复提交失败，请稍后重试");
+                    }
+                });
+            });
+        }
+
+        // 6. 标签筛选事件
+        tagBtns.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                // 更新标签选中状态
+                tagBtns.forEach(b => b.classList.remove("active"));
+                e.currentTarget.classList.add("active");
+                // 更新当前筛选标签
+                currentTag = e.currentTarget.getAttribute("data-tag");
+                // 重新筛选和渲染
+                filterAndSortTopics();
+            });
+        });
+
+        // 7. 排序事件
+        sortBtns.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                // 更新排序选中状态
+                sortBtns.forEach(b => b.classList.remove("active"));
+                e.currentTarget.classList.add("active");
+                // 更新当前排序方式
+                currentSort = e.currentTarget.getAttribute("data-sort");
+                // 重新筛选和渲染
+                filterAndSortTopics();
+            });
+        });
+
+        // 8. 提问弹窗控制
+        createTopicBtn.addEventListener("click", () => {
+            topicModal.classList.add("show");
+        });
+        modalClose.addEventListener("click", () => {
+            topicModal.classList.remove("show");
+        });
+        // 点击弹窗外部关闭
+        topicModal.addEventListener("click", (e) => {
+            if (e.target === topicModal) {
+                topicModal.classList.remove("show");
+            }
+        });
+
+        // 9. 提交提问/分享
+        topicForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const title = document.getElementById("topic-title").value.trim();
+            const content = document.getElementById("topic-content").value.trim();
+            const tag = document.querySelector('input[name="topic-tag"]:checked')?.value;
+            const user = auth.currentUser;
+
+            if (!title || !content || !tag || !user) return;
+
+            try {
+                // 保存到Firebase
+                await db.collection("topics").add({
+                    title: title,
+                    content: content,
+                    tags: [tag], // 存储为数组，支持多标签扩展
+                    authorId: user.uid,
+                    authorName: user.displayName || user.providerData[0].username,
+                    authorAvatar: user.photoURL,
+                    createTime: new Date(),
+                    updateTime: new Date(),
+                    likeCount: 0,
+                    replyCount: 0
+                });
+
+                // 关闭弹窗，重置表单
+                topicModal.classList.remove("show");
+                topicForm.reset();
+                // 重新加载话题
+                loadTopics();
+                alert("发布成功！");
+            } catch (error) {
+                console.error("发布失败：", error);
+                alert("发布失败，请稍后重试");
+            }
+        });
+    </script>
+</body>
+</html>
