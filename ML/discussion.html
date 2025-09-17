@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>讨论区 - 机器学习研讨平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 复用原有Firebase兼容脚本 -->
+    <!-- Firebase 兼容脚本 -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
-        /* 1. 复用原有全局样式变量，保证视觉统一 */
+        /* 保持原有样式不变 */
         :root {
             --primary-color: #3498db;
             --secondary-color: #2c3e50;
@@ -43,8 +43,6 @@
             margin: 0 auto;
             padding: 0 2rem;
         }
-
-        /* 2. 复用原有头部样式，确保导航一致 */
         header {
             background-color: var(--secondary-color);
             color: white;
@@ -152,8 +150,6 @@
             gap: 0.5rem;
             color: white;
         }
-
-        /* 3. 子导航样式（指向主页面关键功能） */
         .subnav {
             background-color: white;
             border-bottom: 1px solid var(--light-gray);
@@ -199,8 +195,6 @@
             background-color: rgba(52, 152, 219, 0.1);
             color: var(--primary-color);
         }
-
-        /* 4. 讨论区主体样式 */
         .discussion-page {
             padding: 3rem 0;
         }
@@ -232,8 +226,6 @@
         .create-topic-btn:hover {
             background-color: #2980b9;
         }
-
-        /* 筛选栏：标签分类 + 排序 */
         .filter-bar {
             background-color: white;
             border-radius: 10px;
@@ -294,8 +286,6 @@
             border-color: var(--primary-color);
             color: var(--primary-color);
         }
-
-        /* 话题列表样式 */
         .topics-list {
             display: flex;
             flex-direction: column;
@@ -311,7 +301,6 @@
         .topic-item:hover {
             box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
         }
-        /* 话题头部（点击展开/收起） */
         .topic-header {
             padding: 1.2rem 1.5rem;
             display: flex;
@@ -361,8 +350,6 @@
             transform: rotate(180deg);
             color: var(--primary-color);
         }
-
-        /* 话题详情（默认隐藏） */
         .topic-content {
             padding: 0 1.5rem;
             max-height: 0;
@@ -371,7 +358,7 @@
         }
         .topic-content.expand {
             padding: 1.5rem;
-            max-height: 2000px; /* 足够大的高度容纳内容 */
+            max-height: 2000px;
         }
         .topic-desc {
             color: var(--text-color);
@@ -402,8 +389,6 @@
         .topic-action-btn:hover {
             background-color: rgba(52, 152, 219, 0.1);
         }
-
-        /* 回复区 */
         .replies-section {
             margin-top: 1rem;
         }
@@ -491,8 +476,6 @@
             color: var(--text-color);
             line-height: 1.6;
         }
-
-        /* 提问弹窗（默认隐藏） */
         .topic-modal {
             position: fixed;
             top: 0;
@@ -607,8 +590,6 @@
         .form-submit:hover {
             background-color: #2980b9;
         }
-
-        /* 页脚样式（复用原有） */
         footer {
             background-color: var(--secondary-color);
             color: white;
@@ -685,8 +666,31 @@
             color: rgba(255, 255, 255, 0.5);
             font-size: 0.9rem;
         }
-
-        /* 响应式适配 */
+        
+        /* 新增：登录状态提示样式 */
+        .login-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .login-status.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .login-status.success {
+            background-color: #2ecc71;
+        }
+        .login-status.error {
+            background-color: var(--accent-color);
+        }
+        
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -745,7 +749,7 @@
     </style>
 </head>
 <body>
-    <!-- 1. 复用原有头部导航 -->
+    <!-- 头部导航 -->
     <header>
         <div class="header-glow"></div>
         <div class="container header-content">
@@ -778,7 +782,7 @@
         </div>
     </header>
 
-    <!-- 2. 子导航：指向主页面和讨论区 -->
+    <!-- 子导航 -->
     <div class="subnav">
         <div class="container subnav-content">
             <div class="breadcrumbs">
@@ -799,10 +803,9 @@
         </div>
     </div>
 
-    <!-- 3. 讨论区主体内容 -->
+    <!-- 讨论区主体内容 -->
     <section class="discussion-page">
         <div class="container">
-            <!-- 页面头部：标题 + 提问按钮 -->
             <div class="page-header">
                 <h2 class="page-title">
                     <i class="fas fa-comments" style="color: var(--primary-color);"></i>
@@ -813,7 +816,6 @@
                 </button>
             </div>
 
-            <!-- 筛选栏：标签分类（理论基础/代码实现/学习资料） + 排序（最新/最热） -->
             <div class="filter-bar">
                 <div class="tag-filter">
                     <span class="filter-label">标签筛选：</span>
@@ -833,9 +835,7 @@
                 </div>
             </div>
 
-            <!-- 话题列表（动态加载） -->
             <div class="topics-list" id="topics-container">
-                <!-- 加载中状态 -->
                 <div class="topic-item">
                     <div class="topic-header">
                         <div class="topic-header-left">
@@ -853,7 +853,7 @@
         </div>
     </section>
 
-    <!-- 4. 提问/分享弹窗 -->
+    <!-- 提问/分享弹窗 -->
     <div class="topic-modal" id="topic-modal">
         <div class="modal-content">
             <button class="modal-close" id="modal-close">
@@ -888,7 +888,10 @@
         </div>
     </div>
 
-    <!-- 5. 复用原有页脚 -->
+    <!-- 登录状态提示 -->
+    <div id="login-status" class="login-status"></div>
+
+    <!-- 页脚 -->
     <footer>
         <div class="container">
             <div class="footer-content">
@@ -927,9 +930,8 @@
         </div>
     </footer>
 
-    <!-- 6. Firebase 与交互逻辑 -->
     <script>
-        // 初始化Firebase（复用原有配置）
+        // 初始化Firebase（确保配置正确）
         const firebaseConfig = {
             apiKey: "AIzaSyBGZzDvAMQl8zAFEHEathM8xHFNQUP_2yY",
             authDomain: "ml-learning-platform.firebaseapp.com",
@@ -938,11 +940,18 @@
             messagingSenderId: "884631894408",
             appId: "1:884631894408:web:4402e6a72f6f072060e23d"
         };
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore(app);
-        const auth = firebase.auth(app);
 
-        // 全局变量：当前筛选标签、排序方式、话题列表数据
+        // 检查Firebase是否已初始化，避免重复初始化错误
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        } else {
+            firebase.app(); // 使用已有的实例
+        }
+
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // 全局变量
         let currentTag = "all";
         let currentSort = "latest";
         let topicsData = [];
@@ -958,27 +967,62 @@
         const userInfoEl = document.getElementById("user-info");
         const loginBtn = document.getElementById("github-login");
         const logoutBtn = document.getElementById("github-logout");
+        const loginStatus = document.getElementById("login-status");
 
-        // 1. 登录状态监听（复用原有逻辑）
+        // 显示登录状态提示
+        function showLoginStatus(message, isError = false) {
+            loginStatus.textContent = message;
+            loginStatus.className = "login-status";
+            loginStatus.classList.add(isError ? "error" : "success");
+            loginStatus.classList.add("show");
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                loginStatus.classList.remove("show");
+            }, 3000);
+        }
+
+        // 1. 登录状态监听 - 改进版本
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // 已登录：显示用户信息，启用提问按钮
+                // 已登录状态
+                console.log("用户已登录:", user);
+                
+                // 更新UI
                 loginBtn.style.display = "none";
                 logoutBtn.style.display = "block";
+                
+                // 确保能正确获取用户名
+                const userName = user.displayName || 
+                                 user.providerData[0]?.username || 
+                                 `用户${user.uid.substring(0, 6)}`;
+                
                 userInfoEl.innerHTML = `
-                    <img src="${user.photoURL}" width="30" height="30" style="border-radius:50%">
-                    <span>${user.displayName || user.providerData[0].username}</span>
+                    <img src="${user.photoURL || 'https://picsum.photos/30/30'}" 
+                         width="30" height="30" style="border-radius:50%" 
+                         alt="${userName}的头像">
+                    <span>${userName}</span>
                 `;
+                
                 createTopicBtn.disabled = false;
+                createTopicBtn.title = "";
+                
                 // 加载话题数据
                 loadTopics();
+                
+                // 显示登录成功提示
+                showLoginStatus(`欢迎回来，${userName}!`);
             } else {
-                // 未登录：隐藏用户信息，禁用提问按钮
+                // 未登录状态
+                console.log("用户未登录");
+                
+                // 更新UI
                 loginBtn.style.display = "block";
                 logoutBtn.style.display = "none";
                 userInfoEl.innerHTML = "";
                 createTopicBtn.disabled = true;
                 createTopicBtn.title = "请先登录后发布内容";
+                
                 // 显示登录提示
                 topicsContainer.innerHTML = `
                     <div class="topic-item">
@@ -1000,21 +1044,92 @@
             }
         });
 
-        // 2. GitHub登录/登出（复用原有逻辑）
-        loginBtn.addEventListener("click", () => {
-            const provider = new firebase.auth.GithubAuthProvider();
-            auth.signInWithPopup(provider)
-                .then((result) => console.log("登录成功：", result.user))
-                .catch((error) => console.error("登录失败：", error));
-        });
-        logoutBtn.addEventListener("click", () => {
-            auth.signOut().then(() => console.log("已登出"));
+        // 2. GitHub登录 - 改进版本，增加错误处理
+        loginBtn.addEventListener("click", async () => {
+            try {
+                // 显示加载状态
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+                
+                // 创建GitHub认证提供器
+                const provider = new firebase.auth.GithubAuthProvider();
+                // 请求用户的公开资料
+                provider.addScope('user:email');
+                
+                // 弹出登录窗口
+                const result = await firebase.auth().signInWithPopup(provider);
+                
+                // 登录成功处理
+                const user = result.user;
+                console.log("GitHub登录成功:", user);
+                
+            } catch (error) {
+                // 详细错误处理
+                console.error("GitHub登录失败:", error);
+                
+                let errorMessage = "登录失败，请稍后重试";
+                
+                // 根据错误类型提供更具体的信息
+                if (error.code === 'auth/popup-blocked') {
+                    errorMessage = "登录窗口被浏览器阻止，请允许弹出窗口后重试";
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    errorMessage = "登录窗口已被关闭，请重新尝试登录";
+                } else if (error.code === 'auth/invalid-credential') {
+                    errorMessage = "认证信息无效，请检查应用配置";
+                }
+                
+                // 显示错误信息
+                showLoginStatus(errorMessage, true);
+                
+            } finally {
+                // 恢复按钮状态
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fab fa-github"></i> GitHub登录';
+            }
         });
 
-        // 3. 加载话题数据（从Firebase获取，支持筛选和排序）
+        // 3. 登出功能 - 改进版本
+        logoutBtn.addEventListener("click", async () => {
+            try {
+                // 显示加载状态
+                logoutBtn.disabled = true;
+                logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登出中...';
+                
+                await auth.signOut();
+                console.log("用户已登出");
+                showLoginStatus("已成功登出");
+                
+            } catch (error) {
+                console.error("登出失败:", error);
+                showLoginStatus("登出失败，请稍后重试", true);
+            } finally {
+                // 恢复按钮状态
+                logoutBtn.disabled = false;
+                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> 退出登录';
+            }
+        });
+
+        // 4. 加载话题数据
         async function loadTopics() {
             try {
-                // 从Firebase获取话题（按创建时间降序）
+                // 显示加载状态
+                topicsContainer.innerHTML = `
+                    <div class="topic-item">
+                        <div class="topic-header">
+                            <div class="topic-header-left">
+                                <div class="topic-title">加载中...</div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <span>正在获取讨论内容</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 从Firebase获取话题
                 const snapshot = await db.collection("topics")
                     .orderBy("createTime", "desc")
                     .get();
@@ -1042,9 +1157,9 @@
                 topicsData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-                    createTime: doc.data().createTime.toDate(), // 转换为Date对象
-                    likeCount: doc.data().likeCount || 0, // 点赞数（默认0）
-                    replies: [] // 回复列表（后续加载）
+                    createTime: doc.data().createTime.toDate(),
+                    likeCount: doc.data().likeCount || 0,
+                    replies: []
                 }));
 
                 // 加载每个话题的回复
@@ -1085,29 +1200,24 @@
             }
         }
 
-        // 4. 筛选（标签）和排序（最新/最热）
+        // 5. 筛选和排序
         function filterAndSortTopics() {
-            // 1. 标签筛选
             let filteredTopics = topicsData;
             if (currentTag !== "all") {
                 filteredTopics = topicsData.filter(topic => topic.tags.includes(currentTag));
             }
 
-            // 2. 排序
             let sortedTopics = filteredTopics;
             if (currentSort === "latest") {
-                // 按创建时间降序（最新在前）
                 sortedTopics.sort((a, b) => b.createTime - a.createTime);
             } else if (currentSort === "hot") {
-                // 按点赞数降序（最热在前）
                 sortedTopics.sort((a, b) => b.likeCount - a.likeCount);
             }
 
-            // 3. 渲染话题列表
             renderTopics(sortedTopics);
         }
 
-        // 5. 渲染话题列表
+        // 6. 渲染话题列表
         function renderTopics(topics) {
             if (topics.length === 0) {
                 topicsContainer.innerHTML = `
@@ -1127,19 +1237,16 @@
                 return;
             }
 
-            // 拼接话题HTML
             let topicsHtml = "";
             topics.forEach(topic => {
-                // 转换标签为中文显示
                 const tagMap = {
                     "theory": "理论基础",
                     "code": "代码实现",
                     "material": "学习资料分享"
                 };
-                const topicTag = topic.tags[0]; // 单个标签（按需求可扩展多标签）
+                const topicTag = topic.tags[0];
                 const tagText = tagMap[topicTag] || topicTag;
 
-                // 格式化日期
                 const formatDate = (date) => {
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1147,13 +1254,10 @@
                     return `${year}-${month}-${day}`;
                 };
 
-                // 回复数量
                 const replyCount = topic.replies.length;
 
-                // 话题HTML
                 topicsHtml += `
                     <div class="topic-item" data-topic-id="${topic.id}">
-                        <!-- 话题头部（点击展开） -->
                         <div class="topic-header" data-topic-id="${topic.id}">
                             <div class="topic-header-left">
                                 <div class="topic-title">
@@ -1184,11 +1288,9 @@
                             </div>
                         </div>
 
-                        <!-- 话题详情（默认隐藏） -->
                         <div class="topic-content" data-topic-id="${topic.id}">
                             <div class="topic-desc">${topic.content}</div>
                             
-                            <!-- 话题操作（点赞） -->
                             <div class="topic-actions">
                                 <button class="topic-action-btn like-btn" data-topic-id="${topic.id}">
                                     <i class="fas fa-thumbs-up"></i>
@@ -1196,26 +1298,23 @@
                                 </button>
                             </div>
 
-                            <!-- 回复区 -->
                             <div class="replies-section">
                                 <div class="replies-header">
                                     <div class="replies-count">${replyCount} 条回复</div>
                                 </div>
 
-                                <!-- 回复输入框 -->
                                 <form class="reply-form" data-topic-id="${topic.id}">
                                     <textarea class="reply-input" placeholder="请输入你的回复..." required></textarea>
                                     <button type="submit" class="reply-submit">提交回复</button>
                                 </form>
 
-                                <!-- 回复列表 -->
                                 <div class="replies-list" data-topic-id="${topic.id}">
                                     ${replyCount > 0 
                                         ? topic.replies.map(reply => `
                                             <div class="reply-item" data-reply-id="${reply.id}">
                                                 <div class="reply-header">
                                                     <div class="reply-author">
-                                                        <img src="${reply.authorAvatar}" class="reply-avatar" alt="用户头像">
+                                                        <img src="${reply.authorAvatar || 'https://picsum.photos/30/30'}" class="reply-avatar" alt="${reply.authorName}的头像">
                                                         <span>${reply.authorName}</span>
                                                     </div>
                                                     <div class="reply-date">${formatDate(reply.createTime)}</div>
@@ -1232,7 +1331,6 @@
                 `;
             });
 
-            // 渲染到容器
             topicsContainer.innerHTML = topicsHtml;
 
             // 绑定话题展开/收起事件
@@ -1252,16 +1350,17 @@
                 btn.addEventListener("click", async (e) => {
                     const topicId = e.currentTarget.getAttribute("data-topic-id");
                     const user = auth.currentUser;
-                    if (!user) return;
+                    if (!user) {
+                        showLoginStatus("请先登录后点赞", true);
+                        return;
+                    }
 
                     try {
-                        // 更新Firebase中的点赞数（自增1）
                         const topicRef = db.collection("topics").doc(topicId);
                         await topicRef.update({
                             likeCount: firebase.firestore.FieldValue.increment(1)
                         });
 
-                        // 更新本地数据和UI
                         const topic = topicsData.find(t => t.id === topicId);
                         if (topic) {
                             topic.likeCount += 1;
@@ -1269,12 +1368,11 @@
                                 <i class="fas fa-thumbs-up"></i>
                                 <span>点赞（${topic.likeCount}）</span>
                             `;
-                            // 重新渲染列表（保持当前筛选和排序）
                             filterAndSortTopics();
                         }
                     } catch (error) {
                         console.error("点赞失败：", error);
-                        alert("点赞失败，请稍后重试");
+                        showLoginStatus("点赞失败，请稍后重试", true);
                     }
                 });
             });
@@ -1286,98 +1384,97 @@
                     const topicId = e.currentTarget.getAttribute("data-topic-id");
                     const replyContent = e.currentTarget.querySelector(".reply-input").value.trim();
                     const user = auth.currentUser;
-                    if (!user || !replyContent) return;
+                    
+                    if (!user) {
+                        showLoginStatus("请先登录后回复", true);
+                        return;
+                    }
+                    
+                    if (!replyContent) {
+                        showLoginStatus("回复内容不能为空", true);
+                        return;
+                    }
 
                     try {
-                        // 1. 保存回复到Firebase
                         const replyRef = db.collection("topics")
                             .doc(topicId)
                             .collection("replies")
                             .add({
                                 content: replyContent,
                                 authorId: user.uid,
-                                authorName: user.displayName || user.providerData[0].username,
+                                authorName: user.displayName || user.providerData[0]?.username || `用户${user.uid.substring(0, 6)}`,
                                 authorAvatar: user.photoURL,
                                 createTime: new Date()
                             });
 
-                        // 2. 更新话题的回复数量
                         const topicRef = db.collection("topics").doc(topicId);
                         await topicRef.update({
                             replyCount: firebase.firestore.FieldValue.increment(1)
                         });
 
-                        // 3. 更新本地数据和UI
                         const topic = topicsData.find(t => t.id === topicId);
                         if (topic) {
                             const newReply = {
                                 id: (await replyRef).id,
                                 content: replyContent,
                                 authorId: user.uid,
-                                authorName: user.displayName || user.providerData[0].username,
+                                authorName: user.displayName || user.providerData[0]?.username || `用户${user.uid.substring(0, 6)}`,
                                 authorAvatar: user.photoURL,
                                 createTime: new Date()
                             };
                             topic.replies.push(newReply);
-                            // 清空输入框
                             e.currentTarget.querySelector(".reply-input").value = "";
-                            // 重新渲染列表
                             filterAndSortTopics();
-                            // 保持当前话题展开
+                            
                             const contentEl = document.querySelector(`.topic-content[data-topic-id="${topicId}"]`);
                             const toggleEl = document.querySelector(`.topic-header[data-topic-id="${topicId}"] .topic-toggle`);
                             contentEl.classList.add("expand");
                             toggleEl.classList.add("rotate");
+                            
+                            showLoginStatus("回复成功");
                         }
                     } catch (error) {
                         console.error("提交回复失败：", error);
-                        alert("回复提交失败，请稍后重试");
+                        showLoginStatus("回复提交失败，请稍后重试", true);
                     }
                 });
             });
         }
 
-        // 6. 标签筛选事件
+        // 7. 标签筛选事件
         tagBtns.forEach(btn => {
             btn.addEventListener("click", (e) => {
-                // 更新标签选中状态
                 tagBtns.forEach(b => b.classList.remove("active"));
                 e.currentTarget.classList.add("active");
-                // 更新当前筛选标签
                 currentTag = e.currentTarget.getAttribute("data-tag");
-                // 重新筛选和渲染
                 filterAndSortTopics();
             });
         });
 
-        // 7. 排序事件
+        // 8. 排序事件
         sortBtns.forEach(btn => {
             btn.addEventListener("click", (e) => {
-                // 更新排序选中状态
                 sortBtns.forEach(b => b.classList.remove("active"));
                 e.currentTarget.classList.add("active");
-                // 更新当前排序方式
                 currentSort = e.currentTarget.getAttribute("data-sort");
-                // 重新筛选和渲染
                 filterAndSortTopics();
             });
         });
 
-        // 8. 提问弹窗控制
+        // 9. 提问弹窗控制
         createTopicBtn.addEventListener("click", () => {
             topicModal.classList.add("show");
         });
         modalClose.addEventListener("click", () => {
             topicModal.classList.remove("show");
         });
-        // 点击弹窗外部关闭
         topicModal.addEventListener("click", (e) => {
             if (e.target === topicModal) {
                 topicModal.classList.remove("show");
             }
         });
 
-        // 9. 提交提问/分享
+        // 10. 提交提问/分享
         topicForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const title = document.getElementById("topic-title").value.trim();
@@ -1385,16 +1482,23 @@
             const tag = document.querySelector('input[name="topic-tag"]:checked')?.value;
             const user = auth.currentUser;
 
-            if (!title || !content || !tag || !user) return;
+            if (!user) {
+                showLoginStatus("请先登录后发布内容", true);
+                return;
+            }
+
+            if (!title || !content || !tag) {
+                showLoginStatus("请填写完整内容并选择标签", true);
+                return;
+            }
 
             try {
-                // 保存到Firebase
                 await db.collection("topics").add({
                     title: title,
                     content: content,
-                    tags: [tag], // 存储为数组，支持多标签扩展
+                    tags: [tag],
                     authorId: user.uid,
-                    authorName: user.displayName || user.providerData[0].username,
+                    authorName: user.displayName || user.providerData[0]?.username || `用户${user.uid.substring(0, 6)}`,
                     authorAvatar: user.photoURL,
                     createTime: new Date(),
                     updateTime: new Date(),
@@ -1402,15 +1506,41 @@
                     replyCount: 0
                 });
 
-                // 关闭弹窗，重置表单
                 topicModal.classList.remove("show");
                 topicForm.reset();
-                // 重新加载话题
                 loadTopics();
-                alert("发布成功！");
+                showLoginStatus("发布成功！");
             } catch (error) {
                 console.error("发布失败：", error);
-                alert("发布失败，请稍后重试");
+                showLoginStatus("发布失败，请稍后重试", true);
+            }
+        });
+
+        // 处理页面加载时的Firebase错误
+        window.addEventListener('DOMContentLoaded', () => {
+            // 检查Firebase是否正确加载
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase SDK未加载成功');
+                showLoginStatus('Firebase服务加载失败，请刷新页面重试', true);
+                
+                // 显示替代内容
+                topicsContainer.innerHTML = `
+                    <div class="topic-item">
+                        <div class="topic-header">
+                            <div class="topic-header-left">
+                                <div class="topic-title" style="color: var(--accent-color);">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    服务加载失败
+                                </div>
+                                <div class="topic-meta">
+                                    <div class="topic-meta-item">
+                                        <span>Firebase服务未加载成功，请刷新页面重试</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         });
     </script>
