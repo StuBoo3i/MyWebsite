@@ -1737,6 +1737,7 @@ if __name__ == "__main__":
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore(app);
         const storage = firebase.storage(app);
+        const auth = firebase.auth(app);
 
         // GitHub登录功能
         document.getElementById('github-login').addEventListener('click', () => {
@@ -2009,7 +2010,7 @@ if __name__ == "__main__":
                 }
             });
         }
-        
+
         // 2. DOM加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
             // 初始动画元素显示
