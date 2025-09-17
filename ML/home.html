@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机器学习研讨平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
+    <!-- 替换原来的Firebase脚本，使用compat兼容版本 -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -1681,6 +1682,7 @@ if __name__ == "__main__":
     </footer>
 
     <script>
+        console.log("Firebase是否加载成功：", typeof firebase !== 'undefined'); // 应输出true
         // 1. Firebase初始化配置（替换为你的项目配置）
         const firebaseConfig = {
             apiKey: "AIzaSyBGZzDvAMQl8zAFEHEathM8xHFNQUP_2yY",
