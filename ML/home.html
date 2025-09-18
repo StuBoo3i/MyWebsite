@@ -2661,15 +2661,33 @@ print("矩阵乘法结果的标准差:", std_val.item())
 
         // 新：加载 PDF 在线阅读（使用微软 Office 在线查看器，国内可用）
         async function loadPdfWithReader(textbookType) {
-            const githubUsername = 'StuBoo3i';
-            
-            if (textbookType === 'd2l') {
-                return `https://${githubUsername}.github.io/MyWebsite/ML/PDF/d2l.pdf`;
-            } else if (textbookType === 'dl') {
-                return `https://${githubUsername}.github.io/MyWebsite/ML/PDF/DeepLearning.pdf`;
-            } else {
-                console.error('未找到对应的 PDF：', textbookType);
-                return null;
+            try {
+                // 1. 复用你已有的函数，获取 GitHub Pages 上的 PDF 链接
+                const pdfUrl = await fetchPdfFromFirebase(textbookType);
+                if (!pdfUrl) {
+                alert('未找到对应的 PDF 资源，请联系管理员');
+                return;
+                }
+
+                // 2. 配置「阅读时下载」按钮（保持原逻辑，无需修改）
+                viewerDownloadBtn.href = pdfUrl;
+                viewerDownloadBtn.download = textbookType === 'd2l' 
+                ? 'd2l.pdf' 
+                : 'DeepLearning.pdf';
+
+                // 3. 关键：替换为微软 Office 在线查看器链接
+                // 格式要求：src 参数需传入编码后的 PDF 公开链接
+                const officeViewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(pdfUrl)}`;
+                pdfIframe.src = officeViewerUrl; // 将链接赋值给 iframe
+
+                // 4. 显示阅读弹窗（保持原逻辑）
+                pdfModal.style.display = 'block';
+
+                // 可选：添加加载状态提示（避免用户等待时以为卡住）
+                pdfIframe.contentDocument.body.innerHTML = '<div style="text-align:center; margin-top:50px; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:10px;">正在加载 PDF，请稍候...</p></div>';
+            } catch (error) {
+                console.error('PDF 阅读失败：', error);
+                alert('在线阅读失败，请尝试直接下载 PDF');
             }
         }
 
