@@ -1803,6 +1803,19 @@ if __name__ == "__main__":
             </div>
         </div>
     </footer>
+    <!-- PDF 在线阅读弹窗（核心：用于渲染 PDF） -->
+    <div id="pdfViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem; box-sizing: border-box;">
+        <!-- 关闭按钮 -->
+        <button id="closeViewerBtn" style="position: absolute; top: 1rem; right: 2rem; color: white; font-size: 1.5rem; background: none; border: none; cursor: pointer; z-index: 1001;">×</button>
+        <!-- 阅读时的下载按钮 -->
+        <a id="viewerDownloadBtn" style="position: absolute; top: 1rem; left: 2rem; color: white; background: var(--primary-color); padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; z-index: 1001;" download>
+            <i class="fas fa-download"></i> 下载 PDF
+        </a>
+        <!-- PDF 渲染画布（核心） -->
+        <div style="width: 100%; height: 90%; overflow: auto;">
+            <canvas id="pdfCanvas" style="display: block; margin: 0 auto; max-width: 100%;"></canvas>
+        </div>
+    </div>
 
     <script>
         console.log("Firebase是否加载成功：", typeof firebase !== 'undefined'); // 应输出true
@@ -2139,39 +2152,51 @@ if __name__ == "__main__":
                 });
             });
             
-            // 5. 学习资源按钮逻辑（PDF下载/代码库/视频跳转）
+            // 5. 学习资源按钮逻辑（重点：处理 PDF 下载/阅读选择）
             document.querySelectorAll('.resource-link').forEach(link => {
                 link.addEventListener('click', async function(e) {
-                    const resourceType = this.getAttribute('data-resource');
-                    const textbookType = this.getAttribute('data-textbook');
-                    
-                    // 仅处理PDF下载（其他资源已设置target="_blank"直接跳转）
+                    const resourceType = this.getAttribute('data-resource'); // 获取资源类型（pdf/code/video 等）
+                    const textbookType = this.getAttribute('data-textbook'); // 获取教材类型（d2l/dl）
+
+                    // 仅处理「PDF 资源」（其他资源如代码、视频保持原逻辑，直接跳转）
                     if (resourceType === 'pdf' && textbookType) {
-                        e.preventDefault();
+                    e.preventDefault(); // 阻止默认链接跳转
+
+                    // 步骤1：弹出选择框，让用户选择操作
+                    const userChoice = confirm('请选择操作：\n• 点击「确定」→ 在线阅读 PDF\n• 点击「取消」→ 下载 PDF');
+
+                    if (userChoice) {
+                        // 步骤2：用户选择「在线阅读」→ 调用阅读器函数
+                        loadPdfWithReader(textbookType);
+                    } else {
+                        // 步骤3：用户选择「下载」→ 触发 PDF 下载（复用原下载逻辑）
                         try {
-                            // 从Firebase获取对应教材的PDF下载链接
-                            const pdfUrl = await fetchPdfFromFirebase(textbookType);
-                            if (pdfUrl) {
-                                // 创建临时a标签触发下载
-                                const downloadLink = document.createElement('a');
-                                downloadLink.href = pdfUrl;
-                                downloadLink.download = textbookType === 'd2l' 
-                                    ? '动手学深度学习-完整版.pdf' 
-                                    : '深度学习-DeepLearning.pdf';
-                                document.body.appendChild(downloadLink);
-                                downloadLink.click();
-                                document.body.removeChild(downloadLink);
-                            } else {
-                                alert('未找到对应的PDF资源，请联系管理员');
-                            }
+                        // 调用你已修改的函数，获取 GitHub 上的 PDF 链接
+                        const pdfUrl = await fetchPdfFromFirebase(textbookType);
+                        if (!pdfUrl) {
+                            alert('未找到对应的 PDF 资源，请联系管理员');
+                            return;
+                        }
+
+                        // 创建临时 a 标签触发下载（浏览器原生下载）
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = pdfUrl;
+                        // 设置下载文件名（区分两本教材）
+                        downloadLink.download = textbookType === 'd2l' 
+                            ? '动手学深度学习.pdf' 
+                            : '深度学习.pdf';
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click(); // 触发下载
+                        document.body.removeChild(downloadLink); // 移除临时标签
                         } catch (error) {
-                            console.error('PDF下载失败：', error);
-                            alert('PDF资源获取失败，请稍后重试');
+                        console.error('PDF 下载失败：', error);
+                        alert('PDF 下载失败，请检查网络或稍后重试');
                         }
                     }
+                    }
+                    // 非 PDF 资源（如代码库、视频）：保持原逻辑，直接跳转
                 });
-            });
-            
+            });            
             // 6. 练习题讨论按钮逻辑（跳转讨论区对应话题）
             document.querySelectorAll('.discuss-exercise').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -2505,18 +2530,19 @@ print("矩阵乘法结果的标准差:", std_val.item())
             });
         }
 
-        // 14. 辅助函数：从Firebase获取PDF下载链接（假设PDF存储在Storage的textbooks目录下）
+        // 14. 辅助函数：直接返回 GitHub Pages 上的 PDF 链接
         async function fetchPdfFromFirebase(textbookType) {
-            try {
-                const fileName = textbookType === 'd2l' 
-                    ? 'textbooks/动手学深度学习-完整版.pdf' 
-                    : 'textbooks/深度学习-DeepLearning.pdf';
-                // 获取Storage中文件的临时下载链接（有效期1小时）
-                const storageRef = storage.ref(fileName);
-                const downloadUrl = await storageRef.getDownloadURL();
-                return downloadUrl;
-            } catch (error) {
-                console.error('获取PDF链接失败：', error);
+
+            const githubUsername = 'StuBoo3i'; 
+            
+            if (textbookType === 'd2l') {
+    
+                return `https://${githubUsername}.github.io/MyWebsite/ML/PDF/d2l.pdf`;
+            } else if (textbookType === 'dl') {
+
+                return `https://${githubUsername}.github.io/MyWebsite/ML/PDF/DeepLearning.pdf`;
+            } else {
+                console.error('未找到对应的 PDF：', textbookType);
                 return null;
             }
         }
@@ -2623,6 +2649,87 @@ print("矩阵乘法结果的标准差:", std_val.item())
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+        // PDF.js 阅读器全局变量
+        let pdfDoc = null; // 存储 PDF 文档实例
+        let currentPage = 1; // 当前阅读页码
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const pdfCtx = pdfCanvas.getContext('2d');
+        const pdfModal = document.getElementById('pdfViewerModal');
+        const closeViewerBtn = document.getElementById('closeViewerBtn');
+        const viewerDownloadBtn = document.getElementById('viewerDownloadBtn');
+
+        // 1. 加载 PDF 并初始化阅读器
+        async function loadPdfWithReader(textbookType) {
+            try {
+                // 调用你已修改的函数，获取 GitHub 上的 PDF 链接
+                const pdfUrl = await fetchPdfFromFirebase(textbookType);
+                if (!pdfUrl) {
+                alert('未找到对应的 PDF 资源，请联系管理员');
+                return;
+                }
+
+                // 给阅读器内的「下载按钮」绑定链接
+                viewerDownloadBtn.href = pdfUrl;
+                viewerDownloadBtn.download = textbookType === 'd2l' ? '动手学深度学习.pdf' : '深度学习.pdf';
+
+                // 初始化 PDF.js（加载 PDF 文档）
+                const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                // 配置 PDF.js 工作器（避免主线程阻塞，确保路径正确）
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+                // 加载 PDF 并渲染第一页
+                pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+                renderPdfPage(currentPage);
+
+                // 显示阅读器弹窗
+                pdfModal.style.display = 'block';
+            } catch (error) {
+                console.error('PDF 阅读器加载失败：', error);
+                alert('PDF 在线阅读功能异常，请尝试下载或刷新页面');
+            }
+        }
+
+        // 2. 渲染 PDF 指定页码
+        function renderPdfPage(pageNum) {
+            if (!pdfDoc) return; // 防止未加载完成时调用
+
+            pdfDoc.getPage(pageNum).then(page => {
+                // 适配屏幕尺寸（缩放比例 1.2，可调整）
+                const viewport = page.getViewport({ scale: 1.2 });
+                pdfCanvas.width = viewport.width;
+                pdfCanvas.height = viewport.height;
+
+                // 渲染页面到画布
+                const renderContext = {
+                canvasContext: pdfCtx,
+                viewport: viewport
+                };
+                page.render(renderContext);
+
+                // 更新当前页码（可选：可添加页码显示，如“第 X/Y 页”）
+                currentPage = pageNum;
+            });
+        }
+
+        // 3. 绑定阅读器关闭事件
+        closeViewerBtn.addEventListener('click', () => {
+            pdfModal.style.display = 'none';
+            pdfDoc = null; // 释放 PDF 实例，避免内存占用
+            currentPage = 1; // 重置页码
+        });
+
+        // 4. 可选：添加「上一页/下一页」功能（需在弹窗中添加按钮）
+        // 示例：在阅读器弹窗中添加两个按钮，绑定以下函数
+        function goToPrevPage() {
+            if (pdfDoc && currentPage > 1) {
+                renderPdfPage(currentPage - 1);
+            }
+        }
+        function goToNextPage() {
+            if (pdfDoc && currentPage < pdfDoc.numPages) {
+                renderPdfPage(currentPage + 1);
+            }
         }
     </script>
 </body>
