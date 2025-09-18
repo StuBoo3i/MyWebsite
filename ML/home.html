@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机器学习研讨平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.189/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.189/build/pdf.worker.min.js"></script>
     <!-- 替换原来的Firebase脚本，使用compat兼容版本 -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     <!-- 补充 Auth 脚本（关键） -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -2663,18 +2664,14 @@ print("矩阵乘法结果的标准差:", std_val.item())
         // 1. 加载 PDF 并初始化阅读器
         async function loadPdfWithReader(textbookType) {
             try {
-                // 调用你已修改的函数，获取 GitHub 上的 PDF 链接
                 const pdfUrl = await fetchPdfFromFirebase(textbookType);
                 if (!pdfUrl) {
                     alert('未找到对应的 PDF 资源，请联系管理员');
                     return;
                 }
 
-                const pdfjsLib = window['pdfjs-dist/build/pdf'];
-                // 配置工作器路径（使用与核心库匹配的版本）
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf.worker.min.js';
                 
-                // 加载 PDF 并渲染第一页
                 pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
                 renderPdfPage(currentPage);
 
