@@ -2651,43 +2651,50 @@ print("矩阵乘法结果的标准差:", std_val.item())
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
-        // 全局变量：指向弹窗和 iframe
+
+        
+        // 全局变量：指向弹窗和 iframe（无需修改）
         const pdfModal = document.getElementById('pdfViewerModal');
         const pdfIframe = document.getElementById('pdfIframe');
         const closeViewerBtn = document.getElementById('closeViewerBtn');
         const viewerDownloadBtn = document.getElementById('viewerDownloadBtn');
 
-        // 新：加载 PDF 在线阅读（使用 Google Docs Viewer）
+        // 新：加载 PDF 在线阅读（使用微软 Office 在线查看器，国内可用）
         async function loadPdfWithReader(textbookType) {
             try {
-                // 1. 获取 GitHub 上的 PDF 链接（复用你已有的函数）
+                // 1. 复用你已有的函数，获取 GitHub Pages 上的 PDF 链接
                 const pdfUrl = await fetchPdfFromFirebase(textbookType);
                 if (!pdfUrl) {
                 alert('未找到对应的 PDF 资源，请联系管理员');
                 return;
                 }
 
-                // 2. 配置下载按钮
+                // 2. 配置「阅读时下载」按钮（保持原逻辑，无需修改）
                 viewerDownloadBtn.href = pdfUrl;
-                viewerDownloadBtn.download = textbookType === 'd2l' ? '动手学深度学习.pdf' : '深度学习.pdf';
+                viewerDownloadBtn.download = textbookType === 'd2l' 
+                ? '动手学深度学习.pdf' 
+                : '深度学习.pdf';
 
-                // 3. 关键：通过 Google Docs Viewer 渲染 PDF（无需 PDF.js）
-                // 构造 Google 文档查看器链接（自动处理 PDF 渲染）
-                const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-                pdfIframe.src = googleViewerUrl; // 赋值给 iframe
+                // 3. 关键：替换为微软 Office 在线查看器链接
+                // 格式要求：src 参数需传入编码后的 PDF 公开链接
+                const officeViewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(pdfUrl)}`;
+                pdfIframe.src = officeViewerUrl; // 将链接赋值给 iframe
 
-                // 4. 显示弹窗
+                // 4. 显示阅读弹窗（保持原逻辑）
                 pdfModal.style.display = 'block';
+
+                // 可选：添加加载状态提示（避免用户等待时以为卡住）
+                pdfIframe.contentDocument.body.innerHTML = '<div style="text-align:center; margin-top:50px; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:10px;">正在加载 PDF，请稍候...</p></div>';
             } catch (error) {
                 console.error('PDF 阅读失败：', error);
-                alert('在线阅读失败，请尝试下载 PDF');
+                alert('在线阅读失败，请尝试直接下载 PDF');
             }
         }
 
-        // 绑定关闭按钮事件
+        // 关闭弹窗逻辑（无需修改）
         closeViewerBtn.addEventListener('click', () => {
         pdfModal.style.display = 'none';
-        pdfIframe.src = ''; // 清空 iframe 避免残留
+        pdfIframe.src = ''; // 清空 iframe 避免残留加载
         });
     </script>
 </body>
