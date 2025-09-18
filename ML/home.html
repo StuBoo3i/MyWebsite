@@ -1805,18 +1805,17 @@ if __name__ == "__main__":
             </div>
         </div>
     </footer>
-    <!-- PDF 在线阅读弹窗（核心：用于渲染 PDF） -->
-    <div id="pdfViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem; box-sizing: border-box;">
+
+    <!-- 新：Google Docs Viewer 容器（替代原 PDF.js 弹窗） -->
+    <div id="pdfViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; padding: 2rem; box-sizing: border-box;">
         <!-- 关闭按钮 -->
         <button id="closeViewerBtn" style="position: absolute; top: 1rem; right: 2rem; color: white; font-size: 1.5rem; background: none; border: none; cursor: pointer; z-index: 1001;">×</button>
         <!-- 阅读时的下载按钮 -->
         <a id="viewerDownloadBtn" style="position: absolute; top: 1rem; left: 2rem; color: white; background: var(--primary-color); padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; z-index: 1001;" download>
             <i class="fas fa-download"></i> 下载 PDF
         </a>
-        <!-- PDF 渲染画布（核心） -->
-        <div style="width: 100%; height: 90%; overflow: auto;">
-            <canvas id="pdfCanvas" style="display: block; margin: 0 auto; max-width: 100%;"></canvas>
-        </div>
+        <!-- 核心：用 iframe 加载 Google Docs Viewer -->
+        <iframe id="pdfIframe" style="width: 100%; height: 90%; border: none;" frameborder="0"></iframe>
     </div>
 
     <script>
@@ -2652,84 +2651,43 @@ print("矩阵乘法结果的标准差:", std_val.item())
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
-        // PDF.js 阅读器全局变量
-        let pdfDoc = null; // 存储 PDF 文档实例
-        let currentPage = 1; // 当前阅读页码
-        const pdfCanvas = document.getElementById('pdfCanvas');
-        const pdfCtx = pdfCanvas.getContext('2d');
+        // 全局变量：指向弹窗和 iframe
         const pdfModal = document.getElementById('pdfViewerModal');
+        const pdfIframe = document.getElementById('pdfIframe');
         const closeViewerBtn = document.getElementById('closeViewerBtn');
         const viewerDownloadBtn = document.getElementById('viewerDownloadBtn');
 
-        // 1. 加载 PDF 并初始化阅读器
+        // 新：加载 PDF 在线阅读（使用 Google Docs Viewer）
         async function loadPdfWithReader(textbookType) {
             try {
-                // 1. 先确认 PDF.js 库是否加载（强制检查）
-                if (typeof window.pdfjsLib === 'undefined') {
-                alert('PDF 阅读器依赖未加载，请刷新页面重试');
-                return;
-                }
-
-                // 2. 获取 GitHub 上的 PDF 链接
+                // 1. 获取 GitHub 上的 PDF 链接（复用你已有的函数）
                 const pdfUrl = await fetchPdfFromFirebase(textbookType);
                 if (!pdfUrl) {
-                alert('未找到对应的 PDF 资源');
+                alert('未找到对应的 PDF 资源，请联系管理员');
                 return;
                 }
 
-                // 3. 配置工作器（直接使用 window 上的全局变量）
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.189/build/pdf.worker.min.js';
-                
-                // 4. 加载并渲染 PDF
-                pdfDoc = await window.pdfjsLib.getDocument(pdfUrl).promise;
-                renderPdfPage(currentPage);
+                // 2. 配置下载按钮
+                viewerDownloadBtn.href = pdfUrl;
+                viewerDownloadBtn.download = textbookType === 'd2l' ? '动手学深度学习.pdf' : '深度学习.pdf';
+
+                // 3. 关键：通过 Google Docs Viewer 渲染 PDF（无需 PDF.js）
+                // 构造 Google 文档查看器链接（自动处理 PDF 渲染）
+                const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+                pdfIframe.src = googleViewerUrl; // 赋值给 iframe
+
+                // 4. 显示弹窗
                 pdfModal.style.display = 'block';
             } catch (error) {
-                console.error('PDF 阅读器加载失败：', error);
-                alert('PDF 阅读失败，错误信息：' + error.message);
+                console.error('PDF 阅读失败：', error);
+                alert('在线阅读失败，请尝试下载 PDF');
             }
         }
 
-        // 2. 渲染 PDF 指定页码
-        function renderPdfPage(pageNum) {
-            if (!pdfDoc) return; // 防止未加载完成时调用
-
-            pdfDoc.getPage(pageNum).then(page => {
-                // 适配屏幕尺寸（缩放比例 1.2，可调整）
-                const viewport = page.getViewport({ scale: 1.2 });
-                pdfCanvas.width = viewport.width;
-                pdfCanvas.height = viewport.height;
-
-                // 渲染页面到画布
-                const renderContext = {
-                canvasContext: pdfCtx,
-                viewport: viewport
-                };
-                page.render(renderContext);
-
-                // 更新当前页码（可选：可添加页码显示，如“第 X/Y 页”）
-                currentPage = pageNum;
-            });
-        }
-
-        // 3. 绑定阅读器关闭事件
+        // 绑定关闭按钮事件
         closeViewerBtn.addEventListener('click', () => {
-            pdfModal.style.display = 'none';
-            pdfDoc = null; // 释放 PDF 实例，避免内存占用
-            currentPage = 1; // 重置页码
+        pdfModal.style.display = 'none';
+        pdfIframe.src = ''; // 清空 iframe 避免残留
         });
-
-        // 4. 可选：添加「上一页/下一页」功能（需在弹窗中添加按钮）
-        // 示例：在阅读器弹窗中添加两个按钮，绑定以下函数
-        function goToPrevPage() {
-            if (pdfDoc && currentPage > 1) {
-                renderPdfPage(currentPage - 1);
-            }
-        }
-        function goToNextPage() {
-            if (pdfDoc && currentPage < pdfDoc.numPages) {
-                renderPdfPage(currentPage + 1);
-            }
-        }
     </script>
 </body>
