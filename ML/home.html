@@ -2664,22 +2664,29 @@ print("矩阵乘法结果的标准差:", std_val.item())
         // 1. 加载 PDF 并初始化阅读器
         async function loadPdfWithReader(textbookType) {
             try {
-                const pdfUrl = await fetchPdfFromFirebase(textbookType);
-                if (!pdfUrl) {
-                    alert('未找到对应的 PDF 资源，请联系管理员');
-                    return;
+                // 1. 先确认 PDF.js 库是否加载（强制检查）
+                if (typeof window.pdfjsLib === 'undefined') {
+                alert('PDF 阅读器依赖未加载，请刷新页面重试');
+                return;
                 }
 
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf.worker.min.js';
-                
-                pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-                renderPdfPage(currentPage);
+                // 2. 获取 GitHub 上的 PDF 链接
+                const pdfUrl = await fetchPdfFromFirebase(textbookType);
+                if (!pdfUrl) {
+                alert('未找到对应的 PDF 资源');
+                return;
+                }
 
-                // 显示阅读器弹窗
+                // 3. 配置工作器（直接使用 window 上的全局变量）
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.189/build/pdf.worker.min.js';
+                
+                // 4. 加载并渲染 PDF
+                pdfDoc = await window.pdfjsLib.getDocument(pdfUrl).promise;
+                renderPdfPage(currentPage);
                 pdfModal.style.display = 'block';
             } catch (error) {
                 console.error('PDF 阅读器加载失败：', error);
-                alert('PDF 在线阅读功能异常，请尝试下载或刷新页面');
+                alert('PDF 阅读失败，错误信息：' + error.message);
             }
         }
 
