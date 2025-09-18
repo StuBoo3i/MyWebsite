@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     <!-- 补充 Auth 脚本（关键） -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -2665,19 +2666,14 @@ print("矩阵乘法结果的标准差:", std_val.item())
                 // 调用你已修改的函数，获取 GitHub 上的 PDF 链接
                 const pdfUrl = await fetchPdfFromFirebase(textbookType);
                 if (!pdfUrl) {
-                alert('未找到对应的 PDF 资源，请联系管理员');
-                return;
+                    alert('未找到对应的 PDF 资源，请联系管理员');
+                    return;
                 }
 
-                // 给阅读器内的「下载按钮」绑定链接
-                viewerDownloadBtn.href = pdfUrl;
-                viewerDownloadBtn.download = textbookType === 'd2l' ? '动手学深度学习.pdf' : '深度学习.pdf';
-
-                // 初始化 PDF.js（加载 PDF 文档）
                 const pdfjsLib = window['pdfjs-dist/build/pdf'];
-                // 配置 PDF.js 工作器（避免主线程阻塞，确保路径正确）
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
+                // 配置工作器路径（使用与核心库匹配的版本）
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf.worker.min.js';
+                
                 // 加载 PDF 并渲染第一页
                 pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
                 renderPdfPage(currentPage);
